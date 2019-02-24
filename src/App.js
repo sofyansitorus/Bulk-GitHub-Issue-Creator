@@ -605,13 +605,13 @@ class App extends Component {
     return <SweetAlert {...this.state.alert} />;
   }
 
-  renderBeatLoader(text) {
-    return this.isLoading()
+  renderBeatLoader(text, key) {
+    return this.isLoading(key)
       ? (<BeatLoader
         sizeUnit={'px'}
         size={12}
         color={'#fff'}
-        loading={this.isLoading()}
+        loading
       />)
       : text;
   }
@@ -627,7 +627,7 @@ class App extends Component {
           <Label for="token">Access Token</Label>
           <InputGroup>
             <Input type="password" id="token" name="token" onChange={this.onChangeForm} disabled={this.isDisabled()} />
-            <InputGroupAddon addonType="append"><Button color="primary" onClick={this.onAuth} disabled={this.isDisabled()}>{this.renderBeatLoader('Authenticate')}</Button></InputGroupAddon>
+            <InputGroupAddon addonType="append"><Button color="primary" onClick={this.onAuth} disabled={this.isDisabled()}>{this.renderBeatLoader('Authenticate', 'auth')}</Button></InputGroupAddon>
           </InputGroup>
         </FormGroup>
       </Form>
@@ -701,7 +701,7 @@ class App extends Component {
         })}
         {this.renderFindReplaceForm()}
         <hr />
-        <Button color="primary" size="lg" disabled={this.isDisabled()} block>{this.renderBeatLoader('Submit')}</Button>
+        <Button color="primary" size="lg" disabled={this.isDisabled()} block>{this.renderBeatLoader('Submit', 'submit')}</Button>
         <hr />
       </Form>
     );
