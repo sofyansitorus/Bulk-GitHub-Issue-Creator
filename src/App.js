@@ -46,7 +46,6 @@ class App extends Component {
 
     this.auth = false;
     this.collections = {};
-    this.spinners = {};
     this.repeaters = [{
       findThis: '',
       replaceWith: '',
