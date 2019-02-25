@@ -13,6 +13,7 @@ import has from 'lodash/has';
 import get from 'lodash/get';
 import set from 'lodash/set';
 import concat from 'lodash/concat';
+import last from 'lodash/last';
 import map from 'lodash/map';
 import mapValues from 'lodash/mapValues';
 import pickBy from 'lodash/pickBy';
@@ -291,37 +292,134 @@ class App extends Component {
 
   onSubmitForm(e) {
     e.preventDefault();
-    this.startLoading('submit');
 
-    setTimeout(() => {
-      const formData = {};
-      const errors = [];
 
-      forEach(this.fields, (field, fieldKey) => {
-        const fieldLabel = get(field, 'label', fieldKey);
-        const fieldValue = get(this.state, fieldKey);
+    const formData = {};
+    const errors = [];
 
-        if (field.isRequired && isEmpty(fieldValue)) {
-          errors.push(`${fieldLabel} field is required`);
-          return;
-        }
+    forEach(this.fields, (field, fieldKey) => {
+      const fieldLabel = get(field, 'label', fieldKey);
+      const fieldValue = get(this.state, fieldKey);
 
-        if (!field.payloadExclude) {
-          formData[fieldKey] = fieldValue;
-        }
-      });
-
-      if (errors.length) {
-        this.stopLoading('submit');
-        this.showAlertError(errors);
+      if (field.isRequired && isEmpty(fieldValue)) {
+        errors.push(`${fieldLabel} field is required`);
         return;
       }
 
-      setTimeout(() => {
-        console.log('onSubmitForm', { formData });
+      if (!field.payloadExclude) {
+        formData[fieldKey] = fieldValue;
+      }
+    });
+
+    const issues = [];
+
+    const title = get(formData, 'title', '');
+    const body = get(formData, 'body', '');
+
+    if (!errors.length) {
+      switch (this.state.findReplace) {
+        case 'textarea':
+        case 'text': {
+          let repeaters = clone(this.state.repeaters);
+
+          if (this.state.findReplace === 'textarea') {
+            const lastItem = last(this.state.repeaters);
+            repeaters = map(lastItem.replaceWith.split(/\n/), (replacer) => {
+              return {
+                findThis: lastItem.findThis,
+                replaceWith: replacer,
+              };
+            });
+          }
+
+          forEach(repeaters, (repeater) => {
+            if (isEmpty(repeater.findThis)) {
+              errors.push('Find This field is required');
+              return;
+            } else if (isEmpty(repeater.findThis)) {
+              errors.push('Replace With field is required');
+              return;
+            }
+
+            const regex = new RegExp(repeater.findThis, 'g');
+
+            const issue = assign({}, formData, {
+              title: title.replace(regex, repeater.replaceWith),
+              body: body.replace(regex, repeater.replaceWith),
+            });
+
+            issues.push(issue);
+          });
+          break;
+        }
+
+        default: {
+          issues.push(formData);
+          break;
+        }
+      }
+    }
+
+    if (errors.length) {
+      this.stopLoading('submit');
+      this.showAlertError(errors);
+      return;
+    }
+
+    if (!issues.length) {
+      this.stopLoading('submit');
+      this.showAlertError('There is no issue will be created');
+      return;
+    }
+
+    this.setState({
+      alert: {
+        show: true,
+        type: 'info',
+        title: 'Info',
+        html: `You are going to create ${issues.length} new issues`,
+        confirmButtonColor: '#3085d6',
+        showCancelButton: true,
+        confirmButtonText: 'Continue',
+        onCancel: () => this.setState({ alert: false }),
+        onConfirm: () => this.creteIssues(issues),
+      },
+    });
+  }
+
+  creteIssues(issues) {
+    this.setState({ alert: false });
+    this.startLoading('submit');
+
+    const promises = [];
+
+    forEach(issues, (issue) => {
+      promises.push(axios({
+        method: 'post',
+        url: `https://api.github.com/repos/${this.state.repos}/issues`,
+        headers: {
+          'Authorization': `token ${this.state.token}`,
+        },
+        data: JSON.stringify(issue),
+      }));
+    });
+
+    axios.all(promises)
+      .then((responses) => {
+        console.log({ responses });
+        // Both requests are now complete
         this.stopLoading('submit');
-      }, 3000);
-    }, 0);
+        this.setState({
+          alert: {
+            show: true,
+            type: 'success',
+            title: 'Success',
+            html: `You have successfully created ${responses.length} new issues`,
+            confirmButtonColor: '#3085d6',
+            onConfirm: () => this.setState({ alert: false }),
+          },
+        });
+      });
   }
 
   populateRepos(prevState) {
@@ -536,6 +634,22 @@ class App extends Component {
         html: errorMessage,
         confirmButtonColor: '#3085d6',
         onConfirm: () => this.setState({ alert: false }),
+      },
+    });
+  }
+
+  showAlertInfo(message) {
+    this.setState({
+      alert: {
+        show: true,
+        type: 'info',
+        title: 'Info',
+        html: message,
+        confirmButtonColor: '#3085d6',
+        confirmButtonText: 'Continue',
+        onConfirm: () => this.setState({ alert: false }),
+        showCancelButton: true,
+        onCancel: () => this.setState({ alert: false }),
       },
     });
   }
