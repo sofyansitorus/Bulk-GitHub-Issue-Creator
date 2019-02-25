@@ -290,15 +290,17 @@ class App extends Component {
     e.preventDefault();
     this.startLoading('submit');
 
-    try {
+    setTimeout(() => {
       const formData = {};
+      const errors = [];
 
       forEach(this.fields, (field, fieldKey) => {
         const fieldLabel = get(field, 'label', fieldKey);
         const fieldValue = get(this.state, fieldKey);
 
         if (field.isRequired && isEmpty(fieldValue)) {
-          throw new Error(`${fieldLabel} field is required`);
+          errors.push(`${fieldLabel} field is required`);
+          return;
         }
 
         if (!field.payloadExclude) {
@@ -306,14 +308,17 @@ class App extends Component {
         }
       });
 
+      if (errors.length) {
+        this.stopLoading('submit');
+        this.showAlertError(errors);
+        return;
+      }
+
       setTimeout(() => {
         console.log('onSubmitForm', { formData });
         this.stopLoading('submit');
       }, 3000);
-    } catch (error) {
-      this.stopLoading('submit');
-      this.showAlertError(error.message);
-    }
+    }, 0);
   }
 
   populateRepos(prevState) {
@@ -517,12 +522,15 @@ class App extends Component {
   }
 
   showAlertError(message) {
+    const errors = isArray(message) ? message : [message];
+    const errorMessage = `<ul><li class="text-left">${errors.join('</li><li class="text-left">')}</li></ul>`;
+
     this.setState({
       alert: {
         show: true,
         type: 'error',
         title: 'Error',
-        text: message,
+        html: errorMessage,
         confirmButtonColor: '#3085d6',
         onConfirm: () => this.setState({ alert: false }),
       },
@@ -716,10 +724,12 @@ class App extends Component {
       <div className="container">
         <Jumbotron>
           <h1>Github Issue Looper</h1>
+          <p className="lead">Create github issue in bulk by looping the Find &amp; Replace parameters.</p>
+          <hr />
+          {this.renderAuthForm()}
+          {this.renderIssueForm()}
+          {this.renderAlert()}
         </Jumbotron>
-        {this.renderAuthForm()}
-        {this.renderIssueForm()}
-        {this.renderAlert()}
       </div >
     );
   }
