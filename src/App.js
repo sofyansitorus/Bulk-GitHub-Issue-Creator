@@ -48,10 +48,17 @@ class App extends Component {
     this.auth = false;
     this.collections = {};
     this.preloaders = {};
-    this.repeaters = [{
+
+    this.repeatersTemplate = {
       findThis: '',
       replaceWith: '',
-    }];
+      styles: {},
+      dragFrom: false,
+      dragTo: false,
+      removed: false,
+    };
+
+    this.repeaters = [clone(this.repeatersTemplate)];
 
     this.fields = {
       user: {
@@ -146,21 +153,6 @@ class App extends Component {
           }
         },
       },
-      findThis: {
-        component: Input,
-        label: 'Find This',
-        state: '',
-      },
-      replaceWith: {
-        component: Input,
-        label: 'Replace With',
-        formText: 'Each line will create a new issue by replacing the "Find This" field value within the "Title" and "Body" fields.',
-        state: '',
-        props: {
-          type: 'textarea',
-          rows: 5,
-        },
-      },
     };
 
     this.defaultState = {
@@ -176,7 +168,11 @@ class App extends Component {
       this.collections[fieldKey] = {};
     });
 
-    this.state = assign({}, { token: get(process.env, 'REACT_APP_GITHUB_ACCESS_TOKEN', '') }, this.defaultState);
+    this.state = assign({}, {
+      findReplace: '',
+      repeaters: clone(this.repeaters),
+      token: get(process.env, 'REACT_APP_GITHUB_ACCESS_TOKEN', ''),
+    }, this.defaultState);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -645,31 +641,99 @@ class App extends Component {
     );
   }
 
-  renderFindReplaceForm() {
-    return map(this.repeaters, (repeater, index) => {
-      console.log({ repeater, index });
+  renderFindReplaceFields() {
+    const onClickButtonAddRemove = (event, index, action) => {
+      event.preventDefault();
 
-      return (<Row key={`Repeater--${index}`} form>
+      switch (action) {
+        case 'remove': {
+          this.repeaters[index].removed = true;
+
+          this.setState({
+            repeaters: clone(this.repeaters),
+          });
+          break;
+        }
+
+        default: {
+          this.repeaters.push(clone(this.repeatersTemplate));
+
+          this.setState({
+            repeaters: clone(this.repeaters),
+          });
+        }
+      }
+    };
+
+    const onChangeRepeaterFields = (event, index, key) => {
+      this.repeaters = this.repeaters.map((repeater, i) => {
+        if (index === i) {
+          set(repeater, key, event.target.value);
+        }
+
+        return repeater;
+      });
+
+      this.setState({
+        repeaters: clone(this.repeaters),
+      });
+    };
+
+    const repeaterFields = map(this.repeaters, (repeater, index) => {
+      if (isEmpty(this.state.findReplace)) {
+        return false;
+      }
+
+      if (this.state.findReplace !== 'text' && index !== (this.repeaters.length - 1)) {
+        return false;
+      }
+
+      if (repeater.removed) {
+        return false;
+      }
+
+      const buttonAddRemoveText = index === (this.repeaters.length - 1) ? '+' : '-';
+      const buttonAddRemoveColor = index === (this.repeaters.length - 1) ? 'success' : 'danger';
+      const buttonAddRemoveAction = index === (this.repeaters.length - 1) ? 'add' : 'remove';
+
+      return (<Row
+        key={`Repeater--${index}`}
+        form
+      >
         <Col md={5}>
           <FormGroup>
-            <Label for="exampleEmail">Find This</Label>
-            <Input name="email" id="exampleEmail" placeholder="with a placeholder" />
+            <Label for={`findThis--${index}`}>Find This</Label>
+            <Input id={`findThis--${index}`} name={`findThis--${index}`} defaultValue={repeater.findThis} onChange={(e) => onChangeRepeaterFields(e, index, 'findThis')} disabled={this.isDisabled()} />
           </FormGroup>
         </Col>
         <Col md={7}>
           <FormGroup>
-            <Label for="examplePassword">Replace With</Label>
+            <Label for={`replaceWith--${index}`}>Replace With</Label>
             <InputGroup>
-              <Input type="textarea" rows={5} defaultValue="ABC" />
-              <InputGroupAddon addonType="append">
-                <Button color="success">+</Button>
-              </InputGroupAddon>
+              <Input id={`replaceWith--${index}`} name={`replaceWith--${index}`} rows={6} type={this.state.findReplace} defaultValue={repeater.replaceWith} onChange={(e) => onChangeRepeaterFields(e, index, 'replaceWith')} disabled={this.isDisabled()} />
+              {this.state.findReplace === 'text' && (<InputGroupAddon addonType="append">
+                <Button color={buttonAddRemoveColor} onClick={(e) => onClickButtonAddRemove(e, index, buttonAddRemoveAction)} disabled={this.isDisabled()}>{buttonAddRemoveText}</Button>
+              </InputGroupAddon>)}
             </InputGroup>
-            <FormText color="muted">Each line will create a new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>
+            {this.state.findReplace === 'textarea' && <FormText color="muted">Each line will create a new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>}
           </FormGroup>
         </Col>
       </Row>);
     });
+
+    return (<fieldset>
+      <legend>Find &amp; Replace:</legend>
+      <FormGroup>
+        <Input type="select" name="findReplace" id="findReplace" onChange={this.onChangeForm} disabled={this.isDisabled()}>
+          <option value="">Disabled</option>
+          <option value="text">One to One</option>
+          <option value="textarea">One To Many</option>
+        </Input>
+      </FormGroup>
+      <div id="repeater-fields-wrapper">
+        {repeaterFields}
+      </div>
+    </fieldset>);
   }
 
   renderIssueForm() {
@@ -710,7 +774,7 @@ class App extends Component {
             {fieldFormText}
           </FormGroup>);
         })}
-        {this.renderFindReplaceForm()}
+        {this.renderFindReplaceFields()}
         <hr />
         <Button color="primary" size="lg" disabled={this.isDisabled()} block>{this.renderBeatLoader('Submit', 'submit')}</Button>
         <hr />
