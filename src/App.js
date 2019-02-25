@@ -174,7 +174,7 @@ class App extends Component {
       this.collections[fieldKey] = {};
     });
 
-    this.state = assign({}, { token: '' }, this.defaultState);
+    this.state = assign({}, { token: get(process.env, 'REACT_APP_GITHUB_ACCESS_TOKEN', '') }, this.defaultState);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -625,7 +625,7 @@ class App extends Component {
         <FormGroup>
           <Label for="token">Access Token</Label>
           <InputGroup>
-            <Input type="password" id="token" name="token" onChange={this.onChangeForm} disabled={this.isDisabled()} />
+            <Input type="password" id="token" name="token" onChange={this.onChangeForm} disabled={this.isDisabled()} defaultValue={this.state.token} />
             <InputGroupAddon addonType="append"><Button color="primary" onClick={this.onAuth} disabled={this.isDisabled()}>{this.renderBeatLoader('Authenticate', 'auth')}</Button></InputGroupAddon>
           </InputGroup>
         </FormGroup>
