@@ -406,8 +406,6 @@ class App extends Component {
 
     axios.all(promises)
       .then((responses) => {
-        console.log({ responses });
-        // Both requests are now complete
         this.stopLoading('submit');
         this.setState({
           alert: {
@@ -419,6 +417,9 @@ class App extends Component {
             onConfirm: () => this.setState({ alert: false }),
           },
         });
+      }).catch((error) => {
+        this.stopLoading('submit');
+        this.showAlertError(error.message);
       });
   }
 
@@ -634,22 +635,6 @@ class App extends Component {
         html: errorMessage,
         confirmButtonColor: '#3085d6',
         onConfirm: () => this.setState({ alert: false }),
-      },
-    });
-  }
-
-  showAlertInfo(message) {
-    this.setState({
-      alert: {
-        show: true,
-        type: 'info',
-        title: 'Info',
-        html: message,
-        confirmButtonColor: '#3085d6',
-        confirmButtonText: 'Continue',
-        onConfirm: () => this.setState({ alert: false }),
-        showCancelButton: true,
-        onCancel: () => this.setState({ alert: false }),
       },
     });
   }
