@@ -22,6 +22,7 @@ import isEmpty from 'lodash/isEmpty';
 import isEqual from 'lodash/isEqual';
 import isFunction from 'lodash/isFunction';
 import isUndefined from 'lodash/isUndefined';
+import findIndex from 'lodash/findIndex';
 
 import {
   Form,
@@ -35,7 +36,12 @@ import {
   FormText,
   Row,
   Col,
+  Alert,
 } from 'reactstrap';
+
+let onDragStartTimeout;
+let onDragEnterTimeout;
+let onDragEndTimeout;
 
 class App extends Component {
   constructor(props) {
@@ -169,6 +175,7 @@ class App extends Component {
     });
 
     this.state = assign({}, {
+      isDragging: false,
       findReplace: '',
       repeaters: clone(this.repeaters),
       token: get(process.env, 'REACT_APP_GITHUB_ACCESS_TOKEN', ''),
@@ -647,7 +654,17 @@ class App extends Component {
 
       switch (action) {
         case 'remove': {
-          this.repeaters[index].removed = true;
+          const repeaters = [];
+
+          forEach(this.repeaters, (repeater, i) => {
+            if (index === i) {
+              return;
+            }
+
+            repeaters.push(repeater);
+          });
+
+          this.repeaters = repeaters;
 
           this.setState({
             repeaters: clone(this.repeaters),
@@ -666,25 +683,108 @@ class App extends Component {
     };
 
     const onChangeRepeaterFields = (event, index, key) => {
-      this.repeaters = this.repeaters.map((repeater, i) => {
+      const repeaters = [];
+
+      forEach(this.repeaters, (repeater, i) => {
         if (index === i) {
           set(repeater, key, event.target.value);
         }
 
-        return repeater;
+        repeaters.push(repeater);
       });
+
+      this.repeaters = repeaters;
 
       this.setState({
         repeaters: clone(this.repeaters),
       });
     };
 
-    const repeaterFields = map(this.repeaters, (repeater, index) => {
+    const onDragStart = (index) => {
+      const repeaters = [];
+
+      forEach(this.repeaters, (repeater, i) => {
+        set(repeater, 'dragFrom', (index === i));
+        repeaters.push(repeater);
+      });
+
+      clearTimeout(onDragStartTimeout);
+
+      onDragStartTimeout = setTimeout(() => {
+        this.repeaters = repeaters;
+
+        this.setState({
+          isDragging: true,
+          repeaters: clone(this.repeaters),
+        });
+      }, 1);
+    };
+
+    const onDragEnter = (index) => {
+      const repeaters = [];
+
+      forEach(this.repeaters, (repeater, i) => {
+        set(repeater, 'dragTo', (index === i));
+        repeaters.push(repeater);
+      });
+
+      clearTimeout(onDragEnterTimeout);
+
+      onDragEnterTimeout = setTimeout(() => {
+        this.repeaters = repeaters;
+
+        this.setState({
+          repeaters: clone(this.repeaters),
+        });
+      }, 100);
+    };
+
+    const onDragEnd = () => {
+      const indexDragFrom = findIndex(this.repeaters, repeater => repeater.dragFrom);
+      const indexDragTo = findIndex(this.repeaters, repeater => repeater.dragTo);
+
+      const repeaters = [];
+
+      forEach(this.repeaters, (repeater, i) => {
+        if (indexDragFrom === i) {
+          return;
+        }
+
+        if (indexDragTo === i && i < indexDragFrom) {
+          repeaters.push(this.repeaters[indexDragFrom]);
+        }
+
+        repeaters.push(repeater);
+
+        if (indexDragTo === i && indexDragFrom < i) {
+          repeaters.push(this.repeaters[indexDragFrom]);
+        }
+      });
+
+      this.repeaters = map(repeaters, (repeater) => {
+        set(repeater, 'dragFrom', false);
+        set(repeater, 'dragTo', false);
+
+        return repeater;
+      });
+
+      clearTimeout(onDragEndTimeout);
+
+      onDragEndTimeout = setTimeout(() => {
+        this.setState({
+          repeaters: clone(this.repeaters),
+        });
+      }, 100);
+    };
+
+    const indexDragFrom = findIndex(this.state.repeaters, repeater => repeater.dragFrom);
+
+    const repeaterFields = map(this.state.repeaters, (repeater, index) => {
       if (isEmpty(this.state.findReplace)) {
         return false;
       }
 
-      if (this.state.findReplace !== 'text' && index !== (this.repeaters.length - 1)) {
+      if (this.state.findReplace !== 'text' && index !== (this.state.repeaters.length - 1)) {
         return false;
       }
 
@@ -692,33 +792,41 @@ class App extends Component {
         return false;
       }
 
-      const buttonAddRemoveText = index === (this.repeaters.length - 1) ? '+' : '-';
-      const buttonAddRemoveColor = index === (this.repeaters.length - 1) ? 'success' : 'danger';
-      const buttonAddRemoveAction = index === (this.repeaters.length - 1) ? 'add' : 'remove';
+      const buttonAddRemoveText = index === (this.state.repeaters.length - 1) ? '+' : '-';
+      const buttonAddRemoveColor = index === (this.state.repeaters.length - 1) ? 'success' : 'danger';
+      const buttonAddRemoveAction = index === (this.state.repeaters.length - 1) ? 'add' : 'remove';
+      const isDraggable = this.state.findReplace === 'text' && this.state.repeaters.length > 1;
 
-      return (<Row
+      return (<div
         key={`Repeater--${index}`}
-        form
+        draggable={isDraggable}
+        onDragStart={() => onDragStart(index)}
+        onDragEnter={() => onDragEnter(index)}
+        style={{ cursor: (isDraggable ? 'move' : 'default'), display: (repeater.dragFrom ? 'none' : 'block') }}
       >
-        <Col md={5}>
-          <FormGroup>
-            <Label for={`findThis--${index}`}>Find This</Label>
-            <Input id={`findThis--${index}`} name={`findThis--${index}`} defaultValue={repeater.findThis} onChange={(e) => onChangeRepeaterFields(e, index, 'findThis')} disabled={this.isDisabled()} />
-          </FormGroup>
-        </Col>
-        <Col md={7}>
-          <FormGroup>
-            <Label for={`replaceWith--${index}`}>Replace With</Label>
-            <InputGroup>
-              <Input id={`replaceWith--${index}`} name={`replaceWith--${index}`} rows={6} type={this.state.findReplace} defaultValue={repeater.replaceWith} onChange={(e) => onChangeRepeaterFields(e, index, 'replaceWith')} disabled={this.isDisabled()} />
-              {this.state.findReplace === 'text' && (<InputGroupAddon addonType="append">
-                <Button color={buttonAddRemoveColor} onClick={(e) => onClickButtonAddRemove(e, index, buttonAddRemoveAction)} disabled={this.isDisabled()}>{buttonAddRemoveText}</Button>
-              </InputGroupAddon>)}
-            </InputGroup>
-            {this.state.findReplace === 'textarea' && <FormText color="muted">Each line will create a new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>}
-          </FormGroup>
-        </Col>
-      </Row>);
+        {repeater.dragTo && index < indexDragFrom && <Alert color="primary"></Alert>}
+        <Row form>
+          <Col md={5}>
+            <FormGroup>
+              <Label for={`findThis--${index}`}>Find This</Label>
+              <Input id={`findThis--${index}`} name={`findThis--${index}`} value={repeater.findThis} onChange={(e) => onChangeRepeaterFields(e, index, 'findThis')} disabled={this.isDisabled()} />
+            </FormGroup>
+          </Col>
+          <Col md={7}>
+            <FormGroup>
+              <Label for={`replaceWith--${index}`}>Replace With</Label>
+              <InputGroup>
+                <Input id={`replaceWith--${index}`} name={`replaceWith--${index}`} rows={6} type={this.state.findReplace} value={repeater.replaceWith} onChange={(e) => onChangeRepeaterFields(e, index, 'replaceWith')} disabled={this.isDisabled()} />
+                {this.state.findReplace === 'text' && (<InputGroupAddon addonType="append">
+                  <Button color={buttonAddRemoveColor} onClick={(e) => onClickButtonAddRemove(e, index, buttonAddRemoveAction)} disabled={this.isDisabled()}>{buttonAddRemoveText}</Button>
+                </InputGroupAddon>)}
+              </InputGroup>
+              {this.state.findReplace === 'textarea' && <FormText color="muted">Each line will create a new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>}
+            </FormGroup>
+          </Col>
+        </Row>
+        {repeater.dragTo && indexDragFrom < index && <Alert color="primary"></Alert>}
+      </div>);
     });
 
     return (<fieldset>
@@ -730,7 +838,12 @@ class App extends Component {
           <option value="textarea">One To Many</option>
         </Input>
       </FormGroup>
-      <div id="repeater-fields-wrapper">
+      <hr />
+      <div
+        onDragEnd={() => onDragEnd()}
+        onDragEnter={() => this.setState({ isDragging: true })}
+        onDragLeave={() => this.setState({ isDragging: false })}
+      >
         {repeaterFields}
       </div>
     </fieldset>);
