@@ -96,22 +96,6 @@ class App extends Component {
           isClearable: true,
         },
       },
-      title: {
-        component: Input,
-        label: 'Title',
-        state: '',
-        isRequired: true,
-      },
-      body: {
-        component: Input,
-        label: 'Body',
-        state: '',
-        isRequired: true,
-        props: {
-          type: 'textarea',
-          rows: 8,
-        },
-      },
       assignees: {
         component: Select,
         label: 'Assignees',
@@ -157,6 +141,22 @@ class App extends Component {
               };
             },
           }
+        },
+      },
+      title: {
+        component: Input,
+        label: 'Title',
+        state: '',
+        isRequired: true,
+      },
+      body: {
+        component: Input,
+        label: 'Body',
+        state: '',
+        isRequired: true,
+        props: {
+          type: 'textarea',
+          rows: 8,
         },
       },
     };
@@ -830,7 +830,7 @@ class App extends Component {
     });
 
     return (<fieldset>
-      <legend>Find &amp; Replace:</legend>
+      <legend>Find &amp; Replace</legend>
       <FormGroup>
         <Input type="select" name="findReplace" id="findReplace" onChange={this.onChangeForm} disabled={this.isDisabled()}>
           <option value="">Disabled</option>
