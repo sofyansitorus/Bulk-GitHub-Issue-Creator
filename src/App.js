@@ -6,15 +6,16 @@ import Creatable from 'react-select/lib/Creatable';
 import BeatLoader from 'react-spinners/BeatLoader';
 import SweetAlert from 'sweetalert2-react';
 
+import clone from 'lodash/clone';
 import forEach from 'lodash/forEach';
-import get from 'lodash/get';
 import assign from 'lodash/assign';
 import has from 'lodash/has';
+import get from 'lodash/get';
 import set from 'lodash/set';
 import concat from 'lodash/concat';
 import map from 'lodash/map';
 import mapValues from 'lodash/mapValues';
-import omit from 'lodash/omit';
+import pickBy from 'lodash/pickBy';
 import includes from 'lodash/includes';
 import isArray from 'lodash/isArray';
 import isEmpty from 'lodash/isEmpty';
@@ -46,6 +47,7 @@ class App extends Component {
 
     this.auth = false;
     this.collections = {};
+    this.preloaders = {};
     this.repeaters = [{
       findThis: '',
       replaceWith: '',
@@ -532,31 +534,33 @@ class App extends Component {
       return;
     }
 
-    const isLoading = assign({}, this.state.isLoading, { [key]: key });
+    set(this.preloaders, key, true);
 
-    this.setState({ isLoading });
+    this.setState({ isLoading: clone(this.preloaders) });
   }
 
   stopLoading(key) {
     if (isEmpty(key)) {
+      this.preloaders = {};
+
       this.setState({
-        isLoading: {},
+        isLoading: this.preloaders,
       });
 
       return;
     }
 
-    const isLoading = omit(this.state.isLoading, [key]);
+    set(this.preloaders, key, false);
 
-    this.setState({ isLoading });
+    this.setState({ isLoading: clone(this.preloaders) });
   }
 
   isLoading(key) {
-    if (!isEmpty(key)) {
-      return has(this.state.isLoading, key);
+    if (isEmpty(key)) {
+      return !isEmpty(pickBy(this.state.isLoading, isLoading => isLoading === true));
     }
 
-    return !isEmpty(this.state.isLoading);
+    return get(this.state.isLoading, key);
   }
 
   isDisabled() {
@@ -707,7 +711,7 @@ class App extends Component {
   }
 
   render() {
-    console.log('renderState', { state: this.state, collections: this.collections, auth: this.auth });
+    console.log('renderState', { state: this.state, collections: this.collections });
     return (
       <div className="container">
         <Jumbotron>
