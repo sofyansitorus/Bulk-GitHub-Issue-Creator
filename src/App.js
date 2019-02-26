@@ -801,6 +801,8 @@ class App extends Component {
     }
 
     const fieldData = {
+      label: 'Personal Access Token',
+      formText: 'Create yours: https://github.com/settings/tokens',
       props: {
         type: 'password',
         defaultValue: this.state.token,
