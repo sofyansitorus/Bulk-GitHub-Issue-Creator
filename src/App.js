@@ -35,8 +35,6 @@ import {
   InputGroupAddon,
   Jumbotron,
   FormText,
-  Row,
-  Col,
   Alert,
 } from 'reactstrap';
 
@@ -48,118 +46,20 @@ class App extends Component {
   constructor(props) {
     super(props);
 
+    this.onChangeField = this.onChangeField.bind(this);
     this.onAuth = this.onAuth.bind(this);
-    this.onChangeForm = this.onChangeForm.bind(this);
-    this.onSubmitForm = this.onSubmitForm.bind(this);
+    this.onCreateIssue = this.onCreateIssue.bind(this);
 
     this.auth = false;
     this.collections = {};
     this.preloaders = {};
 
-    this.repeatersTemplate = {
-      findThis: '',
-      replaceWith: '',
+    this.replaceWithTemplate = {
+      value: '',
       styles: {},
       dragFrom: false,
       dragTo: false,
       removed: false,
-    };
-
-    this.repeaters = [clone(this.repeatersTemplate)];
-
-    this.fields = {
-      user: {
-        component: Select,
-        label: 'User/Organization',
-        state: '',
-        isRequired: true,
-        callable: ['options', 'isLoading', 'isDisabled'],
-        payloadExclude: true,
-        props: {
-          options: this.getCollections,
-          isLoading: this.isLoading,
-          isDisabled: this.isDisabled,
-          isSearchable: true,
-          isClearable: true,
-        },
-      },
-      repos: {
-        component: Select,
-        label: 'Repos',
-        state: '',
-        isRequired: true,
-        callable: ['options', 'isLoading', 'isDisabled'],
-        props: {
-          options: this.getCollections,
-          isLoading: this.isLoading,
-          isDisabled: this.isDisabled,
-          isSearchable: false,
-          isClearable: true,
-        },
-      },
-      assignees: {
-        component: Select,
-        label: 'Assignees',
-        state: [],
-        callable: ['options', 'isLoading', 'isDisabled'],
-        props: {
-          options: this.getCollections,
-          isLoading: this.isLoading,
-          isDisabled: this.isDisabled,
-          isMulti: true,
-          isClearable: true,
-        },
-      },
-      labels: {
-        component: Creatable,
-        label: 'Labels',
-        state: [],
-        callable: ['options', 'isLoading', 'isDisabled'],
-        props: {
-          options: this.getCollections,
-          isLoading: this.isLoading,
-          isDisabled: this.isDisabled,
-          isClearable: true,
-          isSearchable: true,
-          isMulti: true,
-          styles: {
-            multiValueLabel: (styles, { data, isDisabled }) => {
-              return {
-                ...styles,
-                backgroundColor: isDisabled ? null : `#${data.color}`,
-                color: isDisabled || !has(data, 'color') ? null : invert(`#${data.color}`, true),
-                cursor: isDisabled ? 'not-allowed' : 'default',
-                borderRadius: 0,
-              };
-            },
-            multiValueRemove: (styles, { data, isDisabled }) => {
-              return {
-                ...styles,
-                backgroundColor: isDisabled ? null : `#${data.color}`,
-                color: isDisabled || !has(data, 'color') ? null : invert(`#${data.color}`, true),
-                cursor: isDisabled ? 'not-allowed' : 'default',
-                borderRadius: 0,
-              };
-            },
-          }
-        },
-      },
-      title: {
-        component: Input,
-        label: 'Title',
-        state: '',
-        isRequired: true,
-      },
-      body: {
-        component: Input,
-        label: 'Body',
-        state: '',
-        isRequired: true,
-        props: {
-          type: 'textarea',
-          rows: 8,
-        },
-      },
     };
 
     this.defaultState = {
@@ -167,7 +67,7 @@ class App extends Component {
       alert: false,
     };
 
-    forEach(this.fields, (field, fieldKey) => {
+    forEach(this.getCreateIssueFields(), (field, fieldKey) => {
       if (has(field, 'state')) {
         this.defaultState[fieldKey] = field.state;
       }
@@ -176,17 +76,17 @@ class App extends Component {
     });
 
     this.state = assign({}, {
-      isDragging: false,
       findReplace: '',
-      repeaters: clone(this.repeaters),
+      findThis: '',
+      replaceWith: [clone(this.replaceWithTemplate)],
       token: get(process.env, 'REACT_APP_GITHUB_ACCESS_TOKEN', ''),
     }, this.defaultState);
   }
 
   componentDidUpdate(prevProps, prevState) {
-    this.populateRepos(prevState);
-    this.populateAssignees(prevState);
-    this.populateLabels(prevState);
+    this.populateRepos(assign({}, prevProps, prevState));
+    this.populateAssignees(assign({}, prevProps, prevState));
+    this.populateLabels(assign({}, prevProps, prevState));
   }
 
   onAuth(e) {
@@ -243,7 +143,7 @@ class App extends Component {
     }, 500);
   }
 
-  onChangeForm(event, ActionTypes) {
+  onChangeField(event, ActionTypes) {
     if (get(ActionTypes, 'action') === 'clear') {
       const fieldName = get(ActionTypes, 'name');
       if (fieldName) {
@@ -279,9 +179,30 @@ class App extends Component {
     const fieldName = getFieldName();
     const fieldValue = getFieldValue();
 
-    console.log('onChangeForm', { event, fieldName, fieldValue, ActionTypes });
+    console.log('onChangeField', { event, fieldName, fieldValue, ActionTypes });
 
     if (!fieldName || isEqual(fieldValue, get(this.state, fieldName))) {
+      return;
+    }
+
+    if (fieldName.indexOf('replaceWith--') === 0) {
+      const fieldParts = fieldName.split('--');
+      const fieldPartsName = fieldParts[0];
+      const fieldPartsIndex = fieldParts[1];
+      const replaceWith = [];
+
+      forEach(this.state.replaceWith, (replaceWithValue, i) => {
+        if (parseInt(fieldPartsIndex, 10) === i) {
+          set(replaceWithValue, 'value', fieldValue);
+        }
+
+        replaceWith.push(replaceWithValue);
+      });
+
+      this.setState({
+        [fieldPartsName]: clone(replaceWith),
+      });
+
       return;
     }
 
@@ -290,14 +211,13 @@ class App extends Component {
     });
   }
 
-  onSubmitForm(e) {
+  onCreateIssue(e) {
     e.preventDefault();
-
 
     const formData = {};
     const errors = [];
 
-    forEach(this.fields, (field, fieldKey) => {
+    forEach(this.getCreateIssueFields(), (field, fieldKey) => {
       const fieldLabel = get(field, 'label', fieldKey);
       const fieldValue = get(this.state, fieldKey);
 
@@ -315,37 +235,31 @@ class App extends Component {
 
     const title = get(formData, 'title', '');
     const body = get(formData, 'body', '');
+    const getReplaceWith = () => {
+      if (this.state.findReplace === 'textarea') {
+        return last(this.state.replaceWith).value.split(/\n/);
+      }
+
+      return map(this.state.replaceWith, replaceWith => replaceWith.value);
+    }
 
     if (!errors.length) {
       switch (this.state.findReplace) {
         case 'textarea':
         case 'text': {
-          let repeaters = clone(this.state.repeaters);
+          const replaceWiths = getReplaceWith();
 
-          if (this.state.findReplace === 'textarea') {
-            const lastItem = last(this.state.repeaters);
-            repeaters = map(lastItem.replaceWith.split(/\n/), (replacer) => {
-              return {
-                findThis: lastItem.findThis,
-                replaceWith: replacer,
-              };
-            });
-          }
-
-          forEach(repeaters, (repeater) => {
-            if (isEmpty(repeater.findThis)) {
-              errors.push('Find This field is required');
-              return;
-            } else if (isEmpty(repeater.findThis)) {
-              errors.push('Replace With field is required');
+          forEach(replaceWiths, (replaceWith) => {
+            if (isEmpty(replaceWith)) {
+              errors.push('Replace With field cannot be empty');
               return;
             }
 
-            const regex = new RegExp(repeater.findThis, 'g');
+            const regex = new RegExp(this.state.findThis, 'g');
 
             const issue = assign({}, formData, {
-              title: title.replace(regex, repeater.replaceWith),
-              body: body.replace(regex, repeater.replaceWith),
+              title: title.replace(regex, replaceWith),
+              body: body.replace(regex, replaceWith),
             });
 
             issues.push(issue);
@@ -360,67 +274,69 @@ class App extends Component {
       }
     }
 
+    console.log({ issues });
+
     if (errors.length) {
-      this.stopLoading('submit');
+      this.stopLoading('create-issue');
       this.showAlertError(errors);
       return;
     }
 
     if (!issues.length) {
-      this.stopLoading('submit');
+      this.stopLoading('create-issue');
       this.showAlertError('There is no issue will be created');
       return;
+    }
+
+    const createIssues = (newIssues) => {
+      this.setState({ alert: false });
+      this.startLoading('create-issue');
+
+      const promises = [];
+
+      forEach(newIssues, (newIssue) => {
+        promises.push(axios({
+          method: 'post',
+          url: `https://api.github.com/repos/${this.state.repos}/issues`,
+          headers: {
+            'Authorization': `token ${this.state.token}`,
+          },
+          data: JSON.stringify(newIssue),
+        }));
+      });
+
+      axios.all(promises)
+        .then((responses) => {
+          this.stopLoading('create-issue');
+          this.setState({
+            alert: {
+              show: true,
+              type: 'success',
+              title: 'Success',
+              html: `You have successfully created ${responses.length} new issues`,
+              confirmButtonColor: '#3085d6',
+              onConfirm: () => this.setState({ alert: false }),
+            },
+          });
+        }).catch((error) => {
+          this.stopLoading('create-issue');
+          this.showAlertError(error.message);
+        });
     }
 
     this.setState({
       alert: {
         show: true,
         type: 'info',
-        title: 'Info',
-        html: `You are going to create ${issues.length} new issues`,
+        title: 'Create New Issue',
+        html: `You will create ${issues.length} new issue(s). Are your sure?`,
         confirmButtonColor: '#3085d6',
         showCancelButton: true,
         confirmButtonText: 'Continue',
         onCancel: () => this.setState({ alert: false }),
-        onConfirm: () => this.creteIssues(issues),
+        onConfirm: () => createIssues(issues),
       },
     });
-  }
-
-  creteIssues(issues) {
-    this.setState({ alert: false });
-    this.startLoading('submit');
-
-    const promises = [];
-
-    forEach(issues, (issue) => {
-      promises.push(axios({
-        method: 'post',
-        url: `https://api.github.com/repos/${this.state.repos}/issues`,
-        headers: {
-          'Authorization': `token ${this.state.token}`,
-        },
-        data: JSON.stringify(issue),
-      }));
-    });
-
-    axios.all(promises)
-      .then((responses) => {
-        this.stopLoading('submit');
-        this.setState({
-          alert: {
-            show: true,
-            type: 'success',
-            title: 'Success',
-            html: `You have successfully created ${responses.length} new issues`,
-            confirmButtonColor: '#3085d6',
-            onConfirm: () => this.setState({ alert: false }),
-          },
-        });
-      }).catch((error) => {
-        this.stopLoading('submit');
-        this.showAlertError(error.message);
-      });
   }
 
   populateRepos(prevState) {
@@ -677,6 +593,103 @@ class App extends Component {
     return this.isLoading();
   }
 
+  getCreateIssueFields() {
+    return {
+      user: {
+        component: Select,
+        label: 'User/Organization',
+        state: '',
+        isRequired: true,
+        callable: ['options', 'isLoading', 'isDisabled'],
+        payloadExclude: true,
+        props: {
+          options: this.getCollections,
+          isLoading: this.isLoading,
+          isDisabled: this.isDisabled,
+          isSearchable: true,
+          isClearable: true,
+        },
+      },
+      repos: {
+        component: Select,
+        label: 'Repos',
+        state: '',
+        isRequired: true,
+        callable: ['options', 'isLoading', 'isDisabled'],
+        props: {
+          options: this.getCollections,
+          isLoading: this.isLoading,
+          isDisabled: this.isDisabled,
+          isSearchable: false,
+          isClearable: true,
+        },
+      },
+      assignees: {
+        component: Select,
+        label: 'Assignees',
+        state: [],
+        callable: ['options', 'isLoading', 'isDisabled'],
+        props: {
+          options: this.getCollections,
+          isLoading: this.isLoading,
+          isDisabled: this.isDisabled,
+          isMulti: true,
+          isClearable: true,
+        },
+      },
+      labels: {
+        component: Creatable,
+        label: 'Labels',
+        state: [],
+        callable: ['options', 'isLoading', 'isDisabled'],
+        props: {
+          options: this.getCollections,
+          isLoading: this.isLoading,
+          isDisabled: this.isDisabled,
+          isClearable: true,
+          isSearchable: true,
+          isMulti: true,
+          styles: {
+            multiValueLabel: (styles, { data, isDisabled }) => {
+              return {
+                ...styles,
+                backgroundColor: isDisabled ? null : `#${data.color}`,
+                color: isDisabled || !has(data, 'color') ? null : invert(`#${data.color}`, true),
+                cursor: isDisabled ? 'not-allowed' : 'default',
+                borderRadius: 0,
+              };
+            },
+            multiValueRemove: (styles, { data, isDisabled }) => {
+              return {
+                ...styles,
+                backgroundColor: isDisabled ? null : `#${data.color}`,
+                color: isDisabled || !has(data, 'color') ? null : invert(`#${data.color}`, true),
+                cursor: isDisabled ? 'not-allowed' : 'default',
+                borderRadius: 0,
+              };
+            },
+          }
+        },
+      },
+      title: {
+        component: Input,
+        label: 'Title',
+        state: '',
+        isRequired: true,
+      },
+      body: {
+        component: Input,
+        label: 'Body',
+        state: '',
+        isRequired: true,
+        props: {
+          type: 'textarea',
+          rows: 8,
+        },
+      },
+    };
+  }
+
   getCollections(key, defaultValue) {
     switch (key) {
       case 'assignees':
@@ -729,20 +742,83 @@ class App extends Component {
       : text;
   }
 
+  renderField(key, field) {
+    const elementProps = mapValues(assign({}, {
+      onChange: this.onChangeField,
+      disabled: this.isDisabled(),
+    }, field.props), (props, propsKey) => {
+      if (isFunction(props) && includes(field.callable, propsKey)) {
+        return props.call(this, key);
+      }
+
+      return props;
+    });
+
+    const fieldLabel = field.label ? React.createElement(Label, {
+      for: key,
+      key: `label--${key}`
+    }, field.label) : false;
+
+    const fieldFormText = field.formText ? React.createElement(FormText, {
+      key: `formText--${key}`
+    }, field.formText) : false;
+
+    let fieldElement = React.createElement(field.component || Input, assign({}, elementProps, {
+      id: key,
+      name: key,
+      key,
+    }), field.children);
+
+    if (field.inputGroup) {
+      const inputGroup = assign({}, {
+        addonType: 'append',
+        buttonColor: 'primary',
+        buttonText: key,
+        buttonPreloader: key,
+        disabled: this.isDisabled(),
+        onClick: (e) => e.preventDefault(),
+      }, field.inputGroup);
+
+      fieldElement = (<InputGroup>
+        {fieldElement}
+        <InputGroupAddon addonType={inputGroup.addonType}>
+          <Button
+            color={inputGroup.buttonColor}
+            onClick={inputGroup.onClick}
+            disabled={inputGroup.disabled}>
+            {this.renderBeatLoader(inputGroup.buttonText, inputGroup.buttonPreloader)}
+          </Button>
+        </InputGroupAddon>
+      </InputGroup>);
+    }
+
+    return (<FormGroup key={`formGroup--${key}`}>
+      {fieldLabel}
+      {fieldElement}
+      {fieldFormText}
+    </FormGroup>);
+  }
+
   renderAuthForm() {
     if (this.auth) {
       return false;
     }
 
+    const fieldData = {
+      props: {
+        type: 'password',
+        defaultValue: this.state.token,
+      },
+      inputGroup: {
+        onClick: this.onAuth,
+        buttonText: 'Authenticate',
+        buttonPreloader: 'auth',
+      },
+    };
+
     return (
       <Form method="post" onSubmit={(e) => e.preventDefault()}>
-        <FormGroup>
-          <Label for="token">Access Token</Label>
-          <InputGroup>
-            <Input type="password" id="token" name="token" onChange={this.onChangeForm} disabled={this.isDisabled()} defaultValue={this.state.token} />
-            <InputGroupAddon addonType="append"><Button color="primary" onClick={this.onAuth} disabled={this.isDisabled()}>{this.renderBeatLoader('Authenticate', 'auth')}</Button></InputGroupAddon>
-          </InputGroup>
-        </FormGroup>
+        {this.renderField('token', fieldData)}
       </Form>
     );
   }
@@ -753,242 +829,188 @@ class App extends Component {
 
       switch (action) {
         case 'remove': {
-          const repeaters = [];
+          const replaceWith = [];
 
-          forEach(this.repeaters, (repeater, i) => {
+          forEach(this.state.replaceWith, (replaceWithData, i) => {
             if (index === i) {
               return;
             }
 
-            repeaters.push(repeater);
+            replaceWith.push(replaceWithData);
           });
 
-          this.repeaters = repeaters;
-
           this.setState({
-            repeaters: clone(this.repeaters),
+            replaceWith: clone(replaceWith),
           });
           break;
         }
 
         default: {
-          this.repeaters.push(clone(this.repeatersTemplate));
+          const replaceWith = concat([], this.state.replaceWith, [clone(this.replaceWithTemplate)]);
 
           this.setState({
-            repeaters: clone(this.repeaters),
+            replaceWith: clone(replaceWith),
           });
         }
       }
     };
 
-    const onChangeRepeaterFields = (event, index, key) => {
-      const repeaters = [];
-
-      forEach(this.repeaters, (repeater, i) => {
-        if (index === i) {
-          set(repeater, key, event.target.value);
-        }
-
-        repeaters.push(repeater);
-      });
-
-      this.repeaters = repeaters;
-
-      this.setState({
-        repeaters: clone(this.repeaters),
-      });
-    };
-
     const onDragStart = (index) => {
-      const repeaters = [];
+      const replaceWith = [];
 
-      forEach(this.repeaters, (repeater, i) => {
-        set(repeater, 'dragFrom', (index === i));
-        repeaters.push(repeater);
+      forEach(this.state.replaceWith, (replaceWithData, i) => {
+        replaceWith.push(assign({}, replaceWithData, { dragFrom: (index === i) }));
       });
 
       clearTimeout(onDragStartTimeout);
 
       onDragStartTimeout = setTimeout(() => {
-        this.repeaters = repeaters;
-
         this.setState({
-          isDragging: true,
-          repeaters: clone(this.repeaters),
+          replaceWith: clone(replaceWith),
         });
       }, 1);
     };
 
     const onDragEnter = (index) => {
-      const repeaters = [];
+      const replaceWith = [];
 
-      forEach(this.repeaters, (repeater, i) => {
-        set(repeater, 'dragTo', (index === i));
-        repeaters.push(repeater);
+      forEach(this.state.replaceWith, (replaceWithData, i) => {
+        replaceWith.push(assign({}, replaceWithData, { dragTo: (index === i) }));
       });
 
       clearTimeout(onDragEnterTimeout);
 
       onDragEnterTimeout = setTimeout(() => {
-        this.repeaters = repeaters;
-
         this.setState({
-          repeaters: clone(this.repeaters),
+          replaceWith: clone(replaceWith),
         });
       }, 100);
     };
 
     const onDragEnd = () => {
-      const indexDragFrom = findIndex(this.repeaters, repeater => repeater.dragFrom);
-      const indexDragTo = findIndex(this.repeaters, repeater => repeater.dragTo);
+      const indexDragFrom = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragFrom);
+      const indexDragTo = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragTo);
 
-      const repeaters = [];
+      const replaceWith = [];
 
-      forEach(this.repeaters, (repeater, i) => {
+      forEach(this.state.replaceWith, (replaceWithData, i) => {
         if (indexDragFrom === i) {
           return;
         }
 
         if (indexDragTo === i && i < indexDragFrom) {
-          repeaters.push(this.repeaters[indexDragFrom]);
+          replaceWith.push(this.state.replaceWith[indexDragFrom]);
         }
 
-        repeaters.push(repeater);
+        replaceWith.push(replaceWithData);
 
         if (indexDragTo === i && indexDragFrom < i) {
-          repeaters.push(this.repeaters[indexDragFrom]);
+          replaceWith.push(this.state.replaceWith[indexDragFrom]);
         }
       });
 
-      this.repeaters = map(repeaters, (repeater) => {
-        set(repeater, 'dragFrom', false);
-        set(repeater, 'dragTo', false);
+      const replaceWithReset = map(replaceWith, (replaceWithData) => {
+        set(replaceWithData, 'dragFrom', false);
+        set(replaceWithData, 'dragTo', false);
 
-        return repeater;
+        return replaceWithData;
       });
 
       clearTimeout(onDragEndTimeout);
 
       onDragEndTimeout = setTimeout(() => {
         this.setState({
-          repeaters: clone(this.repeaters),
+          replaceWith: clone(replaceWithReset),
         });
       }, 100);
     };
 
-    const indexDragFrom = findIndex(this.state.repeaters, repeater => repeater.dragFrom);
-
-    const repeaterFields = map(this.state.repeaters, (repeater, index) => {
+    const findThisField = () => {
       if (isEmpty(this.state.findReplace)) {
         return false;
       }
 
-      if (this.state.findReplace !== 'text' && index !== (this.state.repeaters.length - 1)) {
+      return (<FormGroup>
+        <Label for="findThis">Find This</Label>
+        <Input name="findThis" id="findThis" onChange={this.onChangeField} disabled={this.isDisabled()} />
+        <hr />
+      </FormGroup>);
+    }
+
+    const replaceWithField = () => {
+      if (isEmpty(this.state.findReplace)) {
         return false;
       }
 
-      if (repeater.removed) {
-        return false;
-      }
+      const indexDragFrom = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragFrom);
 
-      const buttonAddRemoveText = index === (this.state.repeaters.length - 1) ? '+' : '-';
-      const buttonAddRemoveColor = index === (this.state.repeaters.length - 1) ? 'success' : 'danger';
-      const buttonAddRemoveAction = index === (this.state.repeaters.length - 1) ? 'add' : 'remove';
-      const isDraggable = this.state.findReplace === 'text' && this.state.repeaters.length > 1;
+      return (<div onDragEnd={() => onDragEnd()}>
+        {map(this.state.replaceWith, (replaceWith, index) => {
+          if (this.state.findReplace !== 'text' && index !== (this.state.replaceWith.length - 1)) {
+            return false;
+          }
 
-      return (<div
-        key={`Repeater--${index}`}
-        draggable={isDraggable}
-        onDragStart={() => onDragStart(index)}
-        onDragEnter={() => onDragEnter(index)}
-        style={{ cursor: (isDraggable ? 'move' : 'default'), display: (repeater.dragFrom ? 'none' : 'block') }}
-      >
-        {repeater.dragTo && index < indexDragFrom && <Alert color="primary"></Alert>}
-        <Row form>
-          <Col md={5}>
-            <FormGroup>
-              <Label for={`findThis--${index}`}>Find This</Label>
-              <Input id={`findThis--${index}`} name={`findThis--${index}`} value={repeater.findThis} onChange={(e) => onChangeRepeaterFields(e, index, 'findThis')} disabled={this.isDisabled()} />
-            </FormGroup>
-          </Col>
-          <Col md={7}>
-            <FormGroup>
-              <Label for={`replaceWith--${index}`}>Replace With</Label>
-              <InputGroup>
-                <Input id={`replaceWith--${index}`} name={`replaceWith--${index}`} rows={6} type={this.state.findReplace} value={repeater.replaceWith} onChange={(e) => onChangeRepeaterFields(e, index, 'replaceWith')} disabled={this.isDisabled()} />
-                {this.state.findReplace === 'text' && (<InputGroupAddon addonType="append">
-                  <Button color={buttonAddRemoveColor} onClick={(e) => onClickButtonAddRemove(e, index, buttonAddRemoveAction)} disabled={this.isDisabled()}>{buttonAddRemoveText}</Button>
-                </InputGroupAddon>)}
-              </InputGroup>
-              {this.state.findReplace === 'textarea' && <FormText color="muted">Each line will create a new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>}
-            </FormGroup>
-          </Col>
-        </Row>
-        {repeater.dragTo && indexDragFrom < index && <Alert color="primary"></Alert>}
+          const buttonAddRemoveText = index === (this.state.replaceWith.length - 1) ? '+' : '-';
+          const buttonAddRemoveColor = index === (this.state.replaceWith.length - 1) ? 'success' : 'danger';
+          const buttonAddRemoveAction = index === (this.state.replaceWith.length - 1) ? 'add' : 'remove';
+          const isDraggable = this.state.findReplace === 'text' && this.state.replaceWith.length > 1;
+
+          return (<FormGroup
+            key={index}
+            draggable={isDraggable}
+            onDragStart={() => onDragStart(index)}
+            onDragEnter={() => onDragEnter(index)}
+            style={{ cursor: (isDraggable ? 'move' : 'default'), display: (replaceWith.dragFrom ? 'none' : 'block') }}>
+            {replaceWith.dragTo && index < indexDragFrom && <Alert color="primary"></Alert>}
+            <Label for={`replaceWith--${index}`}>Replace With</Label>
+            <InputGroup>
+              <Input id={`replaceWith--${index}`} name={`replaceWith--${index}`} rows={8} type={this.state.findReplace} value={replaceWith.value} onChange={this.onChangeField} disabled={this.isDisabled()} />
+              {this.state.findReplace === 'text' && (<InputGroupAddon addonType="append">
+                <Button color={buttonAddRemoveColor} onClick={(e) => onClickButtonAddRemove(e, index, buttonAddRemoveAction)} disabled={this.isDisabled()}>{buttonAddRemoveText}</Button>
+              </InputGroupAddon>)}
+            </InputGroup>
+            {this.state.findReplace === 'textarea' && <FormText color="muted">Each line will be looped to create new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>}
+            {replaceWith.dragTo && index > indexDragFrom && <Alert color="primary"></Alert>}
+          </FormGroup>);
+        })}
+        <hr />
       </div>);
-    });
+    }
 
     return (<fieldset>
       <legend>Find &amp; Replace</legend>
       <FormGroup>
-        <Input type="select" name="findReplace" id="findReplace" onChange={this.onChangeForm} disabled={this.isDisabled()}>
+        <Input type="select" name="findReplace" id="findReplace" onChange={this.onChangeField} disabled={this.isDisabled()}>
           <option value="">Disabled</option>
-          <option value="text">One to One</option>
-          <option value="textarea">One To Many</option>
+          <option value="text">Repeater</option>
+          <option value="textarea">Textarea</option>
         </Input>
       </FormGroup>
       <hr />
-      <div
-        onDragEnd={() => onDragEnd()}
-        onDragEnter={() => this.setState({ isDragging: true })}
-        onDragLeave={() => this.setState({ isDragging: false })}
-      >
-        {repeaterFields}
-      </div>
+      {findThisField()}
+      {replaceWithField()}
     </fieldset>);
   }
 
-  renderIssueForm() {
+  renderCreateIssueForm() {
     if (!this.auth) {
       return false;
     }
 
     return (
-      <Form method="post" onSubmit={this.onSubmitForm}>
-        {map(this.fields, (field, key) => {
-          const elementProps = mapValues(assign({}, {
-            onChange: this.onChangeForm,
-            disabled: this.isDisabled(),
-          }, field.props), (props, propsKey) => {
-            if (isFunction(props) && includes(field.callable, propsKey)) {
-              return props.call(this, key);
-            }
-
-            return props;
-          });
-
-          const fieldLabel = field.label ? React.createElement(Label, {
-            for: key,
-            key: `Label--${key}`
-          }, field.label) : false;
-
-          const fieldFormText = field.label ? React.createElement(FormText, {
-            key: `FormText--${key}`
-          }, field.formText) : false;
-
-          return (<FormGroup key={`FormGroup--${key}`}>
-            {fieldLabel}
-            {React.createElement(field.component, assign({}, elementProps, {
-              id: key,
-              name: key,
-              key,
-            }), field.children)}
-            {fieldFormText}
-          </FormGroup>);
+      <Form method="post" onSubmit={this.onCreateIssue}>
+        {map(this.getCreateIssueFields(), (field, key) => {
+          return this.renderField(key, field);
         })}
         {this.renderFindReplaceFields()}
-        <hr />
-        <Button color="primary" size="lg" disabled={this.isDisabled()} block>{this.renderBeatLoader('Submit', 'submit')}</Button>
+        <Button
+          color="primary"
+          size="lg"
+          disabled={this.isDisabled()}
+          block
+        >
+          {this.renderBeatLoader('Create Issue', 'create-issue')}
+        </Button>
         <hr />
       </Form>
     );
@@ -1003,7 +1025,7 @@ class App extends Component {
           <p className="lead">Create github issue in bulk by looping the Find &amp; Replace parameters.</p>
           <hr />
           {this.renderAuthForm()}
-          {this.renderIssueForm()}
+          {this.renderCreateIssueForm()}
           {this.renderAlert()}
         </Jumbotron>
       </div >
