@@ -1,0 +1,13 @@
+diff --git a/node_modules/sweetalert2-react/lib/SweetAlert.js b/node_modules/sweetalert2-react/lib/SweetAlert.js
+index e78f622..09cc453 100644
+--- a/node_modules/sweetalert2-react/lib/SweetAlert.js
++++ b/node_modules/sweetalert2-react/lib/SweetAlert.js
+@@ -230,7 +230,7 @@ var withSwalInstance = exports.withSwalInstance = function withSwalInstance(swal
+     reverseButtons: _propTypes2.default.bool,
+     buttonsStyling: _propTypes2.default.bool,
+     imageUrl: _propTypes2.default.string,
+-    html: _propTypes2.default.bool,
++    html: _propTypes2.default.string,
+     animation: _propTypes2.default.oneOfType([_propTypes2.default.bool, _propTypes2.default.oneOf(['pop', 'slide-from-top', 'slide-from-bottom'])]),
+     // inputType: PropTypes.oneOf(ALLOWS_INPUT_TYPES),
+     inputPlaceholder: _propTypes2.default.string,
