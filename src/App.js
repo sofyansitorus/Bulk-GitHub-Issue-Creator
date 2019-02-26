@@ -89,6 +89,72 @@ class App extends Component {
     this.populateLabels(assign({}, prevProps, prevState));
   }
 
+  onChangeField(event, ActionTypes) {
+    if (get(ActionTypes, 'action') === 'clear') {
+      const fieldName = get(ActionTypes, 'name');
+      if (fieldName) {
+        this.setState({
+          [fieldName]: get(this.defaultState, fieldName),
+        });
+
+        return;
+      }
+    }
+
+    const getFieldName = () => {
+      if (isArray(event)) {
+        return get(event[0], 'target.name', get(event[0], 'name'));
+      }
+
+      return get(event, 'target.name', get(event, 'name'));
+    };
+
+    const getFieldValue = () => {
+      if (isArray(event)) {
+        const values = [];
+        forEach(event, (e) => {
+          values.push(get(e, 'target.value', get(e, 'value')));
+        });
+
+        return values;
+      }
+
+      return get(event, 'target.value', get(event, 'value'));
+    };
+
+    const fieldName = getFieldName();
+    const fieldValue = getFieldValue();
+
+    if (!fieldName || isEqual(fieldValue, get(this.state, fieldName))) {
+      return;
+    }
+
+    if (fieldName.indexOf('replaceWith--') === 0) {
+      const fieldParts = fieldName.split('--');
+      const fieldPartsName = fieldParts[0];
+      const fieldPartsIndex = fieldParts[1];
+      const replaceWith = [];
+
+      forEach(this.state.replaceWith, (replaceWithValue, i) => {
+        if (parseInt(fieldPartsIndex, 10) === i) {
+          set(replaceWithValue, 'value', fieldValue);
+        }
+
+        replaceWith.push(replaceWithValue);
+      });
+
+      this.setState({
+        [fieldPartsName]: clone(replaceWith),
+      });
+
+      return;
+    }
+
+    this.setState({
+      [fieldName]: fieldValue,
+    });
+  }
+
   onAuth(e) {
     e.preventDefault();
 
@@ -141,74 +207,6 @@ class App extends Component {
           this.showAlertError(error.message);
         });
     }, 500);
-  }
-
-  onChangeField(event, ActionTypes) {
-    if (get(ActionTypes, 'action') === 'clear') {
-      const fieldName = get(ActionTypes, 'name');
-      if (fieldName) {
-        this.setState({
-          [fieldName]: get(this.defaultState, fieldName),
-        });
-
-        return;
-      }
-    }
-
-    const getFieldName = () => {
-      if (isArray(event)) {
-        return get(event[0], 'target.name', get(event[0], 'name'));
-      }
-
-      return get(event, 'target.name', get(event, 'name'));
-    };
-
-    const getFieldValue = () => {
-      if (isArray(event)) {
-        const values = [];
-        forEach(event, (e) => {
-          values.push(get(e, 'target.value', get(e, 'value')));
-        });
-
-        return values;
-      }
-
-      return get(event, 'target.value', get(event, 'value'));
-    };
-
-    const fieldName = getFieldName();
-    const fieldValue = getFieldValue();
-
-    console.log('onChangeField', { event, fieldName, fieldValue, ActionTypes });
-
-    if (!fieldName || isEqual(fieldValue, get(this.state, fieldName))) {
-      return;
-    }
-
-    if (fieldName.indexOf('replaceWith--') === 0) {
-      const fieldParts = fieldName.split('--');
-      const fieldPartsName = fieldParts[0];
-      const fieldPartsIndex = fieldParts[1];
-      const replaceWith = [];
-
-      forEach(this.state.replaceWith, (replaceWithValue, i) => {
-        if (parseInt(fieldPartsIndex, 10) === i) {
-          set(replaceWithValue, 'value', fieldValue);
-        }
-
-        replaceWith.push(replaceWithValue);
-      });
-
-      this.setState({
-        [fieldPartsName]: clone(replaceWith),
-      });
-
-      return;
-    }
-
-    this.setState({
-      [fieldName]: fieldValue,
-    });
   }
 
   onCreateIssue(e) {
@@ -273,8 +271,6 @@ class App extends Component {
         }
       }
     }
-
-    console.log({ issues });
 
     if (errors.length) {
       this.stopLoading('create-issue');
@@ -823,186 +819,186 @@ class App extends Component {
     );
   }
 
-  renderFindReplaceFields() {
-    const onClickButtonAddRemove = (event, index, action) => {
-      event.preventDefault();
-
-      switch (action) {
-        case 'remove': {
-          const replaceWith = [];
-
-          forEach(this.state.replaceWith, (replaceWithData, i) => {
-            if (index === i) {
-              return;
-            }
-
-            replaceWith.push(replaceWithData);
-          });
-
-          this.setState({
-            replaceWith: clone(replaceWith),
-          });
-          break;
-        }
-
-        default: {
-          const replaceWith = concat([], this.state.replaceWith, [clone(this.replaceWithTemplate)]);
-
-          this.setState({
-            replaceWith: clone(replaceWith),
-          });
-        }
-      }
-    };
-
-    const onDragStart = (index) => {
-      const replaceWith = [];
-
-      forEach(this.state.replaceWith, (replaceWithData, i) => {
-        replaceWith.push(assign({}, replaceWithData, { dragFrom: (index === i) }));
-      });
-
-      clearTimeout(onDragStartTimeout);
-
-      onDragStartTimeout = setTimeout(() => {
-        this.setState({
-          replaceWith: clone(replaceWith),
-        });
-      }, 1);
-    };
-
-    const onDragEnter = (index) => {
-      const replaceWith = [];
-
-      forEach(this.state.replaceWith, (replaceWithData, i) => {
-        replaceWith.push(assign({}, replaceWithData, { dragTo: (index === i) }));
-      });
-
-      clearTimeout(onDragEnterTimeout);
-
-      onDragEnterTimeout = setTimeout(() => {
-        this.setState({
-          replaceWith: clone(replaceWith),
-        });
-      }, 100);
-    };
-
-    const onDragEnd = () => {
-      const indexDragFrom = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragFrom);
-      const indexDragTo = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragTo);
-
-      const replaceWith = [];
-
-      forEach(this.state.replaceWith, (replaceWithData, i) => {
-        if (indexDragFrom === i) {
-          return;
-        }
-
-        if (indexDragTo === i && i < indexDragFrom) {
-          replaceWith.push(this.state.replaceWith[indexDragFrom]);
-        }
-
-        replaceWith.push(replaceWithData);
-
-        if (indexDragTo === i && indexDragFrom < i) {
-          replaceWith.push(this.state.replaceWith[indexDragFrom]);
-        }
-      });
-
-      const replaceWithReset = map(replaceWith, (replaceWithData) => {
-        set(replaceWithData, 'dragFrom', false);
-        set(replaceWithData, 'dragTo', false);
-
-        return replaceWithData;
-      });
-
-      clearTimeout(onDragEndTimeout);
-
-      onDragEndTimeout = setTimeout(() => {
-        this.setState({
-          replaceWith: clone(replaceWithReset),
-        });
-      }, 100);
-    };
-
-    const findThisField = () => {
-      if (isEmpty(this.state.findReplace)) {
-        return false;
-      }
-
-      return (<FormGroup>
-        <Label for="findThis">Find This</Label>
-        <Input name="findThis" id="findThis" onChange={this.onChangeField} disabled={this.isDisabled()} />
-        <hr />
-      </FormGroup>);
-    }
-
-    const replaceWithField = () => {
-      if (isEmpty(this.state.findReplace)) {
-        return false;
-      }
-
-      const indexDragFrom = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragFrom);
-
-      return (<div onDragEnd={() => onDragEnd()}>
-        {map(this.state.replaceWith, (replaceWith, index) => {
-          if (this.state.findReplace !== 'text' && index !== (this.state.replaceWith.length - 1)) {
-            return false;
-          }
-
-          const buttonAddRemoveText = index === (this.state.replaceWith.length - 1) ? '+' : '-';
-          const buttonAddRemoveColor = index === (this.state.replaceWith.length - 1) ? 'success' : 'danger';
-          const buttonAddRemoveAction = index === (this.state.replaceWith.length - 1) ? 'add' : 'remove';
-          const isDraggable = this.state.findReplace === 'text' && this.state.replaceWith.length > 1;
-
-          return (<FormGroup
-            key={index}
-            draggable={isDraggable}
-            onDragStart={() => onDragStart(index)}
-            onDragEnter={() => onDragEnter(index)}
-            style={{ cursor: (isDraggable ? 'move' : 'default'), display: (replaceWith.dragFrom ? 'none' : 'block') }}>
-            {replaceWith.dragTo && index < indexDragFrom && <Alert color="primary"></Alert>}
-            <Label for={`replaceWith--${index}`}>Replace With</Label>
-            <InputGroup>
-              <Input id={`replaceWith--${index}`} name={`replaceWith--${index}`} rows={8} type={this.state.findReplace} value={replaceWith.value} onChange={this.onChangeField} disabled={this.isDisabled()} />
-              {this.state.findReplace === 'text' && (<InputGroupAddon addonType="append">
-                <Button color={buttonAddRemoveColor} onClick={(e) => onClickButtonAddRemove(e, index, buttonAddRemoveAction)} disabled={this.isDisabled()}>{buttonAddRemoveText}</Button>
-              </InputGroupAddon>)}
-            </InputGroup>
-            {this.state.findReplace === 'textarea' && <FormText color="muted">Each line will be looped to create new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>}
-            {replaceWith.dragTo && index > indexDragFrom && <Alert color="primary"></Alert>}
-          </FormGroup>);
-        })}
-        <hr />
-      </div>);
-    }
-
-    return (<fieldset>
-      <legend>Find &amp; Replace</legend>
-      <FormGroup>
-        <Input type="select" name="findReplace" id="findReplace" onChange={this.onChangeField} disabled={this.isDisabled()}>
-          <option value="">Disabled</option>
-          <option value="text">Repeater</option>
-          <option value="textarea">Textarea</option>
-        </Input>
-      </FormGroup>
-      <hr />
-      {findThisField()}
-      {replaceWithField()}
-    </fieldset>);
-  }
-
   renderCreateIssueForm() {
     if (!this.auth) {
       return false;
     }
+
+    const renderFindReplaceFields = () => {
+      const onClickButtonAddRemove = (event, index, action) => {
+        event.preventDefault();
+
+        switch (action) {
+          case 'remove': {
+            const replaceWith = [];
+
+            forEach(this.state.replaceWith, (replaceWithData, i) => {
+              if (index === i) {
+                return;
+              }
+
+              replaceWith.push(replaceWithData);
+            });
+
+            this.setState({
+              replaceWith: clone(replaceWith),
+            });
+            break;
+          }
+
+          default: {
+            const replaceWith = concat([], this.state.replaceWith, [clone(this.replaceWithTemplate)]);
+
+            this.setState({
+              replaceWith: clone(replaceWith),
+            });
+          }
+        }
+      };
+
+      const onDragStart = (index) => {
+        const replaceWith = [];
+
+        forEach(this.state.replaceWith, (replaceWithData, i) => {
+          replaceWith.push(assign({}, replaceWithData, { dragFrom: (index === i) }));
+        });
+
+        clearTimeout(onDragStartTimeout);
+
+        onDragStartTimeout = setTimeout(() => {
+          this.setState({
+            replaceWith: clone(replaceWith),
+          });
+        }, 1);
+      };
+
+      const onDragEnter = (index) => {
+        const replaceWith = [];
+
+        forEach(this.state.replaceWith, (replaceWithData, i) => {
+          replaceWith.push(assign({}, replaceWithData, { dragTo: (index === i) }));
+        });
+
+        clearTimeout(onDragEnterTimeout);
+
+        onDragEnterTimeout = setTimeout(() => {
+          this.setState({
+            replaceWith: clone(replaceWith),
+          });
+        }, 100);
+      };
+
+      const onDragEnd = () => {
+        const indexDragFrom = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragFrom);
+        const indexDragTo = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragTo);
+
+        const replaceWith = [];
+
+        forEach(this.state.replaceWith, (replaceWithData, i) => {
+          if (indexDragFrom === i) {
+            return;
+          }
+
+          if (indexDragTo === i && i < indexDragFrom) {
+            replaceWith.push(this.state.replaceWith[indexDragFrom]);
+          }
+
+          replaceWith.push(replaceWithData);
+
+          if (indexDragTo === i && indexDragFrom < i) {
+            replaceWith.push(this.state.replaceWith[indexDragFrom]);
+          }
+        });
+
+        const replaceWithReset = map(replaceWith, (replaceWithData) => {
+          set(replaceWithData, 'dragFrom', false);
+          set(replaceWithData, 'dragTo', false);
+
+          return replaceWithData;
+        });
+
+        clearTimeout(onDragEndTimeout);
+
+        onDragEndTimeout = setTimeout(() => {
+          this.setState({
+            replaceWith: clone(replaceWithReset),
+          });
+        }, 100);
+      };
+
+      const findThisField = () => {
+        if (isEmpty(this.state.findReplace)) {
+          return false;
+        }
+
+        return (<FormGroup>
+          <Label for="findThis">Find This</Label>
+          <Input name="findThis" id="findThis" onChange={this.onChangeField} disabled={this.isDisabled()} />
+          <hr />
+        </FormGroup>);
+      }
+
+      const replaceWithField = () => {
+        if (isEmpty(this.state.findReplace)) {
+          return false;
+        }
+
+        const indexDragFrom = findIndex(this.state.replaceWith, replaceWith => replaceWith.dragFrom);
+
+        return (<div onDragEnd={() => onDragEnd()}>
+          {map(this.state.replaceWith, (replaceWith, index) => {
+            if (this.state.findReplace !== 'text' && index !== (this.state.replaceWith.length - 1)) {
+              return false;
+            }
+
+            const buttonAddRemoveText = index === (this.state.replaceWith.length - 1) ? '+' : '-';
+            const buttonAddRemoveColor = index === (this.state.replaceWith.length - 1) ? 'success' : 'danger';
+            const buttonAddRemoveAction = index === (this.state.replaceWith.length - 1) ? 'add' : 'remove';
+            const isDraggable = this.state.findReplace === 'text' && this.state.replaceWith.length > 1;
+
+            return (<FormGroup
+              key={index}
+              draggable={isDraggable}
+              onDragStart={() => onDragStart(index)}
+              onDragEnter={() => onDragEnter(index)}
+              style={{ cursor: (isDraggable ? 'move' : 'default'), display: (replaceWith.dragFrom ? 'none' : 'block') }}>
+              {replaceWith.dragTo && index < indexDragFrom && <Alert color="primary"></Alert>}
+              <Label for={`replaceWith--${index}`}>Replace With</Label>
+              <InputGroup>
+                <Input id={`replaceWith--${index}`} name={`replaceWith--${index}`} rows={8} type={this.state.findReplace} value={replaceWith.value} onChange={this.onChangeField} disabled={this.isDisabled()} />
+                {this.state.findReplace === 'text' && (<InputGroupAddon addonType="append">
+                  <Button color={buttonAddRemoveColor} onClick={(e) => onClickButtonAddRemove(e, index, buttonAddRemoveAction)} disabled={this.isDisabled()}>{buttonAddRemoveText}</Button>
+                </InputGroupAddon>)}
+              </InputGroup>
+              {this.state.findReplace === 'textarea' && <FormText color="muted">Each line will be looped to create new issue by replacing the "Find This" field value within the "Title" and "Body" fields.</FormText>}
+              {replaceWith.dragTo && index > indexDragFrom && <Alert color="primary"></Alert>}
+            </FormGroup>);
+          })}
+          <hr />
+        </div>);
+      }
+
+      return (<fieldset>
+        <legend>Find &amp; Replace</legend>
+        <FormGroup>
+          <Input type="select" name="findReplace" id="findReplace" onChange={this.onChangeField} disabled={this.isDisabled()}>
+            <option value="">Disabled</option>
+            <option value="text">Repeater</option>
+            <option value="textarea">Textarea</option>
+          </Input>
+        </FormGroup>
+        <hr />
+        {findThisField()}
+        {replaceWithField()}
+      </fieldset>);
+    };
 
     return (
       <Form method="post" onSubmit={this.onCreateIssue}>
         {map(this.getCreateIssueFields(), (field, key) => {
           return this.renderField(key, field);
         })}
-        {this.renderFindReplaceFields()}
+        {renderFindReplaceFields()}
         <Button
           color="primary"
           size="lg"
@@ -1017,7 +1013,6 @@ class App extends Component {
   }
 
   render() {
-    console.log('renderState', { state: this.state, collections: this.collections });
     return (
       <div className="container">
         <Jumbotron>
@@ -1026,8 +1021,8 @@ class App extends Component {
           <hr />
           {this.renderAuthForm()}
           {this.renderCreateIssueForm()}
-          {this.renderAlert()}
         </Jumbotron>
+        {this.renderAlert()}
       </div >
     );
   }
