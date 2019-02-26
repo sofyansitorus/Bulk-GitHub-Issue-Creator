@@ -1017,7 +1017,8 @@ class App extends Component {
       <div className="container">
         <Jumbotron>
           <h1>Github Issue Looper</h1>
-          <p className="lead">Create github issue in bulk by looping the Find &amp; Replace parameters.</p>
+          <p className="lead">Create GitHub issue in bulk by looping the Find &amp; Replace parameters.</p>
+          <p>GitHub Repository: <a href="https://github.com/sofyansitorus/github-issue-looper">https://github.com/sofyansitorus/github-issue-looper</a></p>
           <hr />
           {this.renderAuthForm()}
           {this.renderCreateIssueForm()}
