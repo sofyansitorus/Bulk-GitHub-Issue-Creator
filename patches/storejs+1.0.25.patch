@@ -1,0 +1,39 @@
+diff --git a/node_modules/storejs/dist/store.common.js b/node_modules/storejs/dist/store.common.js
+index ac0fe9b..a61834b 100644
+--- a/node_modules/storejs/dist/store.common.js
++++ b/node_modules/storejs/dist/store.common.js
+@@ -10,7 +10,7 @@
+ 
+ 'use strict';
+ 
+-var storage = window.localStorage;
++var storage = window.sessionStorage;
+ 
+ function isJSON(obj) {
+   obj = JSON.stringify(obj);
+diff --git a/node_modules/storejs/dist/store.esm.js b/node_modules/storejs/dist/store.esm.js
+index 925b423..70ad430 100644
+--- a/node_modules/storejs/dist/store.esm.js
++++ b/node_modules/storejs/dist/store.esm.js
+@@ -8,7 +8,7 @@
+  * Licensed under the MIT license.
+  */
+ 
+-var storage = window.localStorage;
++var storage = window.sessionStorage;
+ 
+ function isJSON(obj) {
+   obj = JSON.stringify(obj);
+diff --git a/node_modules/storejs/dist/store.js b/node_modules/storejs/dist/store.js
+index 095a5b6..af5bd47 100644
+--- a/node_modules/storejs/dist/store.js
++++ b/node_modules/storejs/dist/store.js
+@@ -14,7 +14,7 @@
+   (global.store = factory());
+ }(this, (function () { 'use strict';
+ 
+-  var storage = window.localStorage;
++  var storage = window.sessionStorage;
+ 
+   function isJSON(obj) {
+     obj = JSON.stringify(obj);
