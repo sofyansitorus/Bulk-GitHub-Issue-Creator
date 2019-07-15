@@ -1049,7 +1049,7 @@ class PageCreateIssue extends PureComponent {
                                 accept=".csv"
                                 onChange={this.onSelectCSVFile}
                             />
-                            <Button variant="link" href="https://github.com/sofyansitorus/Bulk-GitHub-Issue-Creator/sample.csv" target="_blank" className="p-0 mt-2">Download CSV sample!</Button>
+                            <Button variant="link" href="https://github.com/sofyansitorus/Bulk-GitHub-Issue-Creator/blob/master/sample.csv" target="_blank" className="p-0 mt-2">Download CSV sample!</Button>
                         </Col>
                     </Form.Group>
                 </Form>
