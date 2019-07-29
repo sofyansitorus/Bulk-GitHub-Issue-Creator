@@ -1,4 +1,4 @@
-Demo: [https://bulk-github-issue-creator.netlify.com/](https://bulk-github-issue-creator.netlify.com/).
+Demo: [https://bulk-github-issue-creator.netlify.com](https://bulk-github-issue-creator.netlify.com).
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
