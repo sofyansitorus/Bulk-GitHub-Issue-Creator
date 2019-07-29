@@ -65,8 +65,6 @@ class BGICTabCreateSingleSingle extends PureComponent {
             milestone,
         };
 
-        console.log('issueData', issueData);
-
         startLoading();
 
         apiCreateIssues(issueData, repository, accessToken)
