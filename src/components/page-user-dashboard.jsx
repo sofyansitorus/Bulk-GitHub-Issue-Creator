@@ -132,14 +132,19 @@ class BGICPageUserDashboard extends PureComponent {
             repositorySelected,
             assigneesSelected,
             labelsSelected,
+            milestonesSelected,
         } = this.state;
 
         const tabProps = {
             accessToken,
             repository: repositorySelected ? repositorySelected.full_name : '',
-            assignees: assigneesSelected ? assigneesSelected.map(assignee => assignee.value) : [],
-            labels: labelsSelected ? labelsSelected.map(label => label.value) : [],
+            assignees: assigneesSelected ? assigneesSelected.map(assignee => assignee.login) : [],
+            labels: labelsSelected ? labelsSelected.map(label => label.name) : [],
         };
+
+        if (milestonesSelected) {
+            tabProps.milestone = milestonesSelected.number;
+        }
 
         const tabs = [{
             eventKey: 'single',

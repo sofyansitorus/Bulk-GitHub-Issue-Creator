@@ -114,6 +114,7 @@ class BGICTabImportMultipleIssue extends PureComponent {
             repository,
             assignees,
             labels,
+            milestone,
         } = this.props;
 
         const issues = this.state.issues.map(issue => assign({}, {
@@ -121,6 +122,7 @@ class BGICTabImportMultipleIssue extends PureComponent {
             body: issue.body,
             assignees,
             labels,
+            milestone,
         }));
 
         startLoading();
@@ -363,8 +365,9 @@ BGICTabImportMultipleIssue.propTypes = {
     body: PropTypes.string.isRequired,
     accessToken: PropTypes.string.isRequired,
     repository: PropTypes.string.isRequired,
-    assignees: PropTypes.array.isRequired,
-    labels: PropTypes.array.isRequired,
+    assignees: PropTypes.array,
+    labels: PropTypes.array,
+    milestone: PropTypes.number,
 };
 
 BGICTabImportMultipleIssue.defaultProps = {
