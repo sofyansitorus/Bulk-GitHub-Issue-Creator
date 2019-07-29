@@ -12,7 +12,7 @@ import {
     Spinner,
 } from 'react-bootstrap';
 
-class AnimatedButton extends PureComponent {
+class BGICButton extends PureComponent {
     renderButton() {
         const buttonProps = omit(this.props, ['buttonText', 'isLoading']);
 
@@ -46,16 +46,16 @@ class AnimatedButton extends PureComponent {
     }
 }
 
-AnimatedButton.propTypes = {
+BGICButton.propTypes = {
     buttonText: PropTypes.string,
     isLoading: PropTypes.bool,
     onClick: PropTypes.func,
 };
 
-AnimatedButton.defaultProps = {
+BGICButton.defaultProps = {
     buttonText: '',
     isLoading: false,
     onClick: noop,
 };
 
-export default AnimatedButton;
+export default BGICButton;
