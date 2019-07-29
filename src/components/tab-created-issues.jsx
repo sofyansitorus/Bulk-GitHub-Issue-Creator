@@ -75,6 +75,7 @@ class BGICTabCreatedIssues extends PureComponent {
             repository,
             assignees,
             labels,
+            milestone,
         } = this.props;
 
         const issueData = {
@@ -83,6 +84,7 @@ class BGICTabCreatedIssues extends PureComponent {
             body,
             assignees,
             labels,
+            milestone,
         };
 
         startLoading();
@@ -232,8 +234,9 @@ BGICTabCreatedIssues.propTypes = {
     body: PropTypes.string.isRequired,
     accessToken: PropTypes.string.isRequired,
     repository: PropTypes.string.isRequired,
-    assignees: PropTypes.array.isRequired,
-    labels: PropTypes.array.isRequired,
+    assignees: PropTypes.array,
+    labels: PropTypes.array,
+    milestone: PropTypes.number,
 };
 
 BGICTabCreatedIssues.defaultProps = {

@@ -49,6 +49,7 @@ class BGICTabCreateSingleSingle extends PureComponent {
             repository,
             assignees,
             labels,
+            milestone,
         } = this.props;
 
         const {
@@ -61,7 +62,10 @@ class BGICTabCreateSingleSingle extends PureComponent {
             body,
             assignees,
             labels,
+            milestone,
         };
+
+        console.log('issueData', issueData);
 
         startLoading();
 
@@ -118,8 +122,9 @@ BGICTabCreateSingleSingle.propTypes = {
     body: PropTypes.string.isRequired,
     accessToken: PropTypes.string.isRequired,
     repository: PropTypes.string.isRequired,
-    assignees: PropTypes.array.isRequired,
-    labels: PropTypes.array.isRequired,
+    assignees: PropTypes.array,
+    labels: PropTypes.array,
+    milestone: PropTypes.number,
 };
 
 BGICTabCreateSingleSingle.defaultProps = {
