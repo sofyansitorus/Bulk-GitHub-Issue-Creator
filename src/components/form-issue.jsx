@@ -30,6 +30,14 @@ class BGICFormIssue extends PureComponent {
         this.onChangeIssueBody = this.onChangeIssueBody.bind(this);
     }
 
+    componentWillReceiveProps(nextProps) {
+        if (this.state.activeTab !== 'editor' && !nextProps.issueBody.trim().length) {
+            this.setState({
+                activeTab: 'editor',
+            });
+        }
+    }
+
     onSelectTab(activeTab) {
         this.setState({
             activeTab,
@@ -77,7 +85,14 @@ class BGICFormIssue extends PureComponent {
                                 onChange={this.onChangeIssueBody}
                                 required
                             />
-                            <Button variant="link" href="https://guides.github.com/features/mastering-markdown/" target="_blank" className="p-0 mt-2 mb-0"><FontAwesomeIcon icon={faMarkdown} /> Styling with Markdown is supported</Button>
+                            <Button
+                                variant="link"
+                                href="https://guides.github.com/features/mastering-markdown/"
+                                target="_blank"
+                                className="p-0 mt-2 mb-0"
+                            >
+                                <FontAwesomeIcon icon={faMarkdown} /> Styling with Markdown is supported
+                            </Button>
                         </Tab>
                         <Tab
                             eventKey="preview"
@@ -96,15 +111,15 @@ class BGICFormIssue extends PureComponent {
 
 BGICFormIssue.propTypes = {
     issueTitle: PropTypes.string.isRequired,
-    onChangeIssueTitle: PropTypes.func.isRequired,
     issueBody: PropTypes.string.isRequired,
+    onChangeIssueTitle: PropTypes.func.isRequired,
     onChangeIssueBody: PropTypes.func.isRequired,
 };
 
 BGICFormIssue.defaultProps = {
     issueTitle: '',
-    onChangeIssueTitle: noop,
     issueBody: '',
+    onChangeIssueTitle: noop,
     onChangeIssueBody: noop,
 };
 

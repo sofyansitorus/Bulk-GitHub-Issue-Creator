@@ -14,20 +14,20 @@ import {
     stopLoading,
     setAlertSuccess,
     setAlertError,
-    setDataCreatedIssues,
 } from '../helpers/storage';
 
 import BGICForm from './form';
 import BGICFormIssue from './form-issue';
 
 class BGICTabCreateSingleSingle extends PureComponent {
+    _isMounted = false;
 
     constructor(props) {
         super(props);
 
         this.state = {
-            title: this.props.title,
-            body: this.props.title,
+            editingIssueTitle: '',
+            editingIssueBody: '',
         };
 
         this.onFormReset = this.onFormReset.bind(this);
@@ -36,64 +36,75 @@ class BGICTabCreateSingleSingle extends PureComponent {
         this.onChangeIssueBody = this.onChangeIssueBody.bind(this);
     }
 
+    componentDidMount() {
+        this._isMounted = true;
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
+    }
+
     onFormReset() {
         this.setState({
-            title: '',
-            body: '',
+            editingIssueTitle: '',
+            editingIssueBody: '',
         });
     }
 
     onFormSubmit() {
         const {
             accessToken,
-            repository,
-            assignees,
-            labels,
-            milestone,
+            repositorySelected,
+            assigneesSelected,
+            labelsSelected,
+            milestonesSelected,
         } = this.props;
 
         const {
-            title,
-            body,
+            editingIssueTitle,
+            editingIssueBody,
         } = this.state;
 
         const issueData = {
-            title,
-            body,
-            assignees,
-            labels,
-            milestone,
+            title: editingIssueTitle,
+            body: editingIssueBody,
+            assignees: assigneesSelected ? assigneesSelected.map(assignee => assignee.login) : [],
+            labels: labelsSelected ? labelsSelected.map(label => label.name) : [],
+            milestone: milestonesSelected ? milestonesSelected.number : undefined,
         };
 
         startLoading();
 
-        apiCreateIssues(issueData, repository, accessToken)
+        apiCreateIssues(issueData, repositorySelected.full_name, accessToken)
             .then((responses) => {
-                stopLoading();
-
-                setAlertSuccess(responses.map(response => assign({}, {
-                    message: 'Issue %link% has been successfully created',
-                    linkUrl: response.data.html_url,
-                    linkAnchor: `#${response.data.number}`,
-                })));
-
-                setDataCreatedIssues(responses.map(response => response.data));
+                if (this._isMounted) {
+                    this.onFormReset();
+                    setAlertSuccess(responses.map(response => assign({}, {
+                        message: 'Issue %link% has been successfully created',
+                        linkUrl: response.data.html_url,
+                        linkAnchor: `#${response.data.number}`,
+                    })));
+                }
             }).catch((error) => {
-                stopLoading();
-
-                setAlertError(error);
+                if (this._isMounted) {
+                    setAlertError(error);
+                }
+            }).finally(() => {
+                if (this._isMounted) {
+                    stopLoading();
+                }
             });
     }
 
-    onChangeIssueTitle(title) {
+    onChangeIssueTitle(editingIssueTitle) {
         this.setState({
-            title,
+            editingIssueTitle,
         });
     }
 
-    onChangeIssueBody(body) {
+    onChangeIssueBody(editingIssueBody) {
         this.setState({
-            body,
+            editingIssueBody,
         });
     }
 
@@ -105,8 +116,8 @@ class BGICTabCreateSingleSingle extends PureComponent {
                 onFormSubmit={this.onFormSubmit}
             >
                 <BGICFormIssue
-                    issueTitle={this.state.title}
-                    issueBody={this.state.body}
+                    issueTitle={this.state.editingIssueTitle}
+                    issueBody={this.state.editingIssueBody}
                     onChangeIssueTitle={this.onChangeIssueTitle}
                     onChangeIssueBody={this.onChangeIssueBody}
                 />
@@ -116,18 +127,27 @@ class BGICTabCreateSingleSingle extends PureComponent {
 }
 
 BGICTabCreateSingleSingle.propTypes = {
-    title: PropTypes.string.isRequired,
-    body: PropTypes.string.isRequired,
     accessToken: PropTypes.string.isRequired,
-    repository: PropTypes.string.isRequired,
-    assignees: PropTypes.array,
-    labels: PropTypes.array,
-    milestone: PropTypes.number,
-};
-
-BGICTabCreateSingleSingle.defaultProps = {
-    title: '',
-    body: '',
+    ownerSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
+    repositorySelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
+    assigneesSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.array,
+    ]).isRequired,
+    labelsSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.array,
+    ]).isRequired,
+    milestonesSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
 };
 
 export default BGICTabCreateSingleSingle;

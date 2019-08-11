@@ -230,35 +230,6 @@ export const keyDataCreatedIssue = (issue) => {
     return keyDataGenerator('issue_created', issue);
 };
 
-export const getDataCreatedIssues = (repo) => {
-    const items = getData(store.keys().filter(key => key.indexOf(keyDataCreatedIssue('')) === 0));
-
-    if (repo) {
-        return sortBy(items.filter(item => item.repository_url.indexOf(repo) !== -1), ['number']);
-    }
-
-    return sortBy(items, ['number']);
-};
-
-export const removeDataCreatedIssue = (issue) => removeData(keyDataCreatedIssue(issue), {
-    entity: 'issue_created',
-});
-
-export const setDataCreatedIssue = (issue) => setData(keyDataCreatedIssue(issue), issue, {
-    entity: 'issue_created',
-});
-
-export const setDataCreatedIssues = (issues) => {
-    const data = {};
-
-    forEach(issues, (issue) => {
-        data[keyDataCreatedIssue(issue)] = issue;
-    });
-
-    setData(data, undefined, {
-        entity: 'issue_created',
-    });
-};
 
 /**
  * Assignee Data Helpers

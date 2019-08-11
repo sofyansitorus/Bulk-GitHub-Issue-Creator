@@ -3,11 +3,9 @@ import React, { PureComponent } from 'react';
 import 'bootstrap/scss/bootstrap.scss';
 
 import {
-  get,
-} from 'lodash';
-
-import {
   getAuthentication,
+  setAuthentication,
+  removeAuthentication,
   clearData,
 } from './helpers/storage';
 
@@ -19,67 +17,62 @@ class App extends PureComponent {
   constructor(props) {
     super(props);
 
-    this.onStorageChange = this.onStorageChange.bind(this);
-  }
+    const authentication = getAuthentication();
 
-  componentDidMount() {
-    window.addEventListener('storageChange', this.onStorageChange, false);
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('storageChange', this.onStorageChange);
-  }
-
-  onStorageChange(event) {
-    const eventDataEntity = get(event, 'detail.entity');
-
-    if (eventDataEntity !== 'authentication') {
-      return;
+    this.state = {
+      accessToken: authentication ? authentication.accessToken : '',
+      currentUser: authentication ? authentication.currentUser : false,
     }
 
-    if (get(event, 'detail.method') === 'remove') {
-      clearData();
-    }
+    this.onUserLogin = this.onUserLogin.bind(this);
+    this.onUserLogout = this.onUserLogout.bind(this);
+  }
 
-    this.forceUpdate();
+  onUserLogin(accessToken, currentUser) {
+    clearData();
+    setAuthentication(accessToken, currentUser);
+
+    this.setState({
+      accessToken,
+      currentUser,
+    });
+  }
+
+  onUserLogout() {
+    removeAuthentication();
+    clearData();
+
+    this.setState({
+      accessToken: '',
+      currentUser: false,
+    });
   }
 
   renderNavbar() {
-    const {
-      currentUser,
-    } = this.getAuthentication();
-
-    return <BGICNavbar currentUser={currentUser} />;
-  }
-
-  getAuthentication() {
-    const authentication = getAuthentication();
-
-    if (!authentication) {
-      return {};
-    }
-
-    return authentication;
+    return (<BGICNavbar
+      currentUser={this.state.currentUser}
+      onUserLogout={this.onUserLogout}
+    />);
   }
 
   renderPageLogin() {
     const {
       accessToken,
       currentUser,
-    } = this.getAuthentication();
+    } = this.state;
 
     if (accessToken || currentUser) {
       return null;
     }
 
-    return <BGICPageUserLogin />;
+    return <BGICPageUserLogin onUserLogin={this.onUserLogin} />;
   }
 
   renderPageIssue() {
     const {
       accessToken,
       currentUser,
-    } = this.getAuthentication();
+    } = this.state;
 
     if (!accessToken || !currentUser) {
       return null;
