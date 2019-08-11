@@ -21,7 +21,6 @@ import {
     setDataImportedIssue,
     removeDataImportedIssue,
     removeDataImportedIssues,
-    setDataCreatedIssues,
 } from '../helpers/storage';
 
 import {
@@ -36,14 +35,15 @@ import BGICFormIssue from './form-issue';
 import BGICIssueList from './issue-list';
 
 class BGICTabImportMultipleIssue extends PureComponent {
+    _isMounted = false;
 
     constructor(props) {
         super(props);
 
         this.state = {
-            edit: false,
-            title: this.props.title,
-            body: this.props.title,
+            editingIssue: false,
+            editingIssueTitle: '',
+            editingIssueBody: '',
             dataDelimiter: ',',
             issues: getDataImportedIssues(),
         };
@@ -60,10 +60,12 @@ class BGICTabImportMultipleIssue extends PureComponent {
     }
 
     componentDidMount() {
+        this._isMounted = true;
         window.addEventListener('storageChange', this.onStorageChange, false);
     }
 
     componentWillUnmount() {
+        this._isMounted = false;
         window.removeEventListener('storageChange', this.onStorageChange);
     }
 
@@ -80,30 +82,28 @@ class BGICTabImportMultipleIssue extends PureComponent {
     }
 
     onFormReset() {
-        if (!this.state.edit) {
+        if (this.state.editingIssue) {
+            this.setState({
+                editingIssue: false,
+                editingIssueTitle: '',
+                editingIssueBody: '',
+            });
+        } else {
             removeDataImportedIssues();
         }
-
-        setTimeout(() => {
-            this.setState({
-                edit: false,
-                title: '',
-                body: '',
-            });
-        }, 1);
     }
 
     onFormSubmit() {
         const {
-            edit,
-            title,
-            body,
+            editingIssue,
+            editingIssueTitle,
+            editingIssueBody,
         } = this.state;
 
-        if (edit) {
-            setDataImportedIssue(assign({}, edit, {
-                title,
-                body,
+        if (editingIssue) {
+            setDataImportedIssue(assign({}, editingIssue, {
+                title: editingIssueTitle,
+                body: editingIssueBody,
             }));
 
             return this.onFormReset();
@@ -111,74 +111,74 @@ class BGICTabImportMultipleIssue extends PureComponent {
 
         const {
             accessToken,
-            repository,
-            assignees,
-            labels,
-            milestone,
+            repositorySelected,
+            assigneesSelected,
+            labelsSelected,
+            milestonesSelected,
         } = this.props;
 
         const issues = this.state.issues.map(issue => assign({}, {
             title: issue.title,
             body: issue.body,
-            assignees,
-            labels,
-            milestone,
+            assignees: assigneesSelected ? assigneesSelected.map(assignee => assignee.login) : [],
+            labels: labelsSelected ? labelsSelected.map(label => label.name) : [],
+            milestone: milestonesSelected ? milestonesSelected.number : undefined,
         }));
 
         startLoading();
 
-        apiCreateIssues(issues, repository, accessToken)
+        apiCreateIssues(issues, repositorySelected.full_name, accessToken)
             .then((responses) => {
-                setDataCreatedIssues(responses.map(response => response.data));
-
-                setAlertSuccess(responses.map(response => assign({}, {
-                    message: 'Issue %link% has been successfully created',
-                    linkUrl: response.data.html_url,
-                    linkAnchor: `#${response.data.number}`,
-                })));
-
-                this.onFormReset();
-                stopLoading();
+                if (this._isMounted) {
+                    this.onFormReset();
+                    setAlertSuccess(responses.map(response => assign({}, {
+                        message: 'Issue %link% has been successfully created',
+                        linkUrl: response.data.html_url,
+                        linkAnchor: `#${response.data.number}`,
+                    })));
+                }
             }).catch((error) => {
-                stopLoading();
-
-                setAlertError(error);
+                if (this._isMounted) {
+                    setAlertError(error);
+                }
+            }).finally(() => {
+                if (this._isMounted) {
+                    stopLoading();
+                }
             });
     }
 
-    onChangeIssueTitle(title) {
+    onChangeIssueTitle(editingIssueTitle) {
         this.setState({
-            title,
+            editingIssueTitle,
         });
     }
 
-    onChangeIssueBody(body) {
+    onChangeIssueBody(editingIssueBody) {
         this.setState({
-            body,
+            editingIssueBody,
         });
     }
 
-    onClickIssueEdit(edit) {
-        if (!edit) {
+    onClickIssueEdit(editingIssue) {
+        if (!editingIssue) {
             return;
         }
 
         const {
             title,
             body,
-        } = edit;
+        } = editingIssue;
 
         this.setState({
-            title,
-            body,
-            edit,
+            editingIssueTitle: title,
+            editingIssueBody: body,
+            editingIssue,
         });
     }
 
     onClickIssueDelete(issue) {
         removeDataImportedIssue(issue);
-
-        this.forceUpdate();
     }
 
     onChangeDataDelimiter(event) {
@@ -229,8 +229,6 @@ class BGICTabImportMultipleIssue extends PureComponent {
                 }));
 
                 setDataImportedIssues(issues);
-
-                this.forceUpdate();
             };
 
             fileReader.readAsText(event.target.files[0]);
@@ -241,12 +239,12 @@ class BGICTabImportMultipleIssue extends PureComponent {
 
     renderFormEdit() {
         const {
-            edit,
-            title,
-            body,
+            editingIssue,
+            editingIssueTitle,
+            editingIssueBody,
         } = this.state;
 
-        if (edit === false) {
+        if (editingIssue === false) {
             return null
         }
 
@@ -258,8 +256,8 @@ class BGICTabImportMultipleIssue extends PureComponent {
                 onFormSubmit={this.onFormSubmit}
             >
                 <BGICFormIssue
-                    issueTitle={title}
-                    issueBody={body}
+                    issueTitle={editingIssueTitle}
+                    issueBody={editingIssueBody}
                     onChangeIssueTitle={this.onChangeIssueTitle}
                     onChangeIssueBody={this.onChangeIssueBody}
                 />
@@ -269,82 +267,77 @@ class BGICTabImportMultipleIssue extends PureComponent {
 
     renderFormImport() {
         const {
-            edit,
+            editingIssue,
             issues,
         } = this.state;
 
-        if (edit !== false || issues.length) {
+        if (editingIssue !== false) {
             return null;
         }
 
-        return (
-            <BGICForm
-                buttonReset={false}
-                buttonSubmit={false}
-            >
-                <Form.Group as={Row}>
-                    <Form.Label column sm={4}>
-                        CSV Data Delimiter
-                </Form.Label>
-                    <Col sm={8}>
-                        <Form.Control
-                            as="select"
-                            defaultValue={this.state.dataDelimiter}
-                            onChange={this.onChangeDataDelimiter}
-                        >
-                            <option value=",">Comma</option>
-                            <option value=";">Semicolon</option>
-                        </Form.Control>
-                    </Col>
-                </Form.Group>
-                <Form.Group as={Row}>
-                    <Form.Label column sm={4}>
-                        CSV File Data
-                    </Form.Label>
-                    <Col sm={8}>
-                        <Form.Control
-                            type="file"
-                            accept=".csv"
-                            onChange={this.onSelectCSVFile}
-                        />
-                        <Button
-                            className="p-0 mt-2"
-                            variant="link"
-                            href="https://github.com/sofyansitorus/Bulk-GitHub-Issue-Creator/blob/master/sample.csv"
-                            target="_blank"
-                        >
-                            Download CSV sample
-                        </Button>
-                    </Col>
-                </Form.Group>
-            </BGICForm>
-        );
-    }
+        const formProps = issues.length
+            ? {
+                buttonResetText: 'Reset',
+                buttonSubmitText: 'Create Issues',
+                onFormReset: this.onFormReset,
+                onFormSubmit: this.onFormSubmit,
 
-    renderIssuesList() {
-        const {
-            edit,
-            issues,
-        } = this.state;
+            }
+            : {
+                buttonReset: false,
+                buttonSubmit: false,
+            };
 
-        if (edit !== false || !issues.length) {
-            return null
-        }
-
-        return (
-            <BGICForm
-                buttonResetText="Reset"
-                buttonSubmitText="Create Issues"
-                onFormReset={this.onFormReset}
-                onFormSubmit={this.onFormSubmit}
-            >
+        const formContentOutput = issues.length
+            ? (
                 <BGICIssueList
                     issues={issues}
-                    onEdit={this.onClickIssueEdit}
-                    onDelete={this.onClickIssueDelete}
-                    buttonEdit
-                    buttonDelete
+                    buttonDeleteHandler={this.onClickIssueDelete}
+                    buttonEditHandler={this.onClickIssueEdit}
+                    buttonEditVisible
+                    buttonDeleteVisible
                 />
+            )
+            : (
+                <React.Fragment>
+                    <Form.Group as={Row}>
+                        <Form.Label column sm={4}>CSV Data Delimiter</Form.Label>
+                        <Col sm={8}>
+                            <Form.Control
+                                as="select"
+                                defaultValue={this.state.dataDelimiter}
+                                onChange={this.onChangeDataDelimiter}
+                            >
+                                <option value=",">Comma</option>
+                                <option value=";">Semicolon</option>
+                            </Form.Control>
+                        </Col>
+                    </Form.Group>
+                    <Form.Group as={Row}>
+                        <Form.Label column sm={4}>CSV File Data</Form.Label>
+                        <Col sm={8}>
+                            <Form.Control
+                                type="file"
+                                accept=".csv"
+                                onChange={this.onSelectCSVFile}
+                            />
+                            <Button
+                                className="p-0 mt-2"
+                                variant="link"
+                                href="https://github.com/sofyansitorus/Bulk-GitHub-Issue-Creator/blob/master/sample.csv"
+                                target="_blank"
+                                value="Download CSV sample"
+                            >
+                                Download CSV sample
+                            </Button>
+                        </Col>
+                    </Form.Group>
+                </React.Fragment>
+            );
+
+        return (
+            <BGICForm {...formProps}>
+                {formContentOutput}
             </BGICForm>
         );
     }
@@ -354,25 +347,33 @@ class BGICTabImportMultipleIssue extends PureComponent {
             <React.Fragment>
                 {this.renderFormEdit()}
                 {this.renderFormImport()}
-                {this.renderIssuesList()}
             </React.Fragment>
         );
     }
 }
 
 BGICTabImportMultipleIssue.propTypes = {
-    title: PropTypes.string.isRequired,
-    body: PropTypes.string.isRequired,
     accessToken: PropTypes.string.isRequired,
-    repository: PropTypes.string.isRequired,
-    assignees: PropTypes.array,
-    labels: PropTypes.array,
-    milestone: PropTypes.number,
-};
-
-BGICTabImportMultipleIssue.defaultProps = {
-    title: '',
-    body: '',
+    ownerSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
+    repositorySelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
+    assigneesSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.array,
+    ]).isRequired,
+    labelsSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.array,
+    ]).isRequired,
+    milestonesSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
 };
 
 export default BGICTabImportMultipleIssue;

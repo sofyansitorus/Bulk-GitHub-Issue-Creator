@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 
 import {
     isEmpty,
+    noop,
 } from 'lodash';
 
 import {
@@ -11,28 +12,12 @@ import {
     Nav,
     NavDropdown,
 } from 'react-bootstrap';
-
-import {
-    removeAuthentication,
-} from '../helpers/storage';
-
 class BGICNavbar extends PureComponent {
-
-constructor(props) {
-        super(props);
-
-        this.onUserLogout = this.onUserLogout.bind(this);
-    }
-
-    onUserLogout(event) {
-        event.preventDefault();
-
-        removeAuthentication();
-    }
 
     renderUserMenu() {
         const {
             currentUser,
+            onUserLogout,
         } = this.props;
 
         if (isEmpty(currentUser)) {
@@ -45,7 +30,7 @@ constructor(props) {
                 <Navbar.Collapse id="basic-navbar-nav" className="justify-content-end">
                     <Nav>
                         <NavDropdown title={currentUser.name} id="basic-nav-dropdown">
-                            <NavDropdown.Item onClick={this.onUserLogout}>Logout</NavDropdown.Item>
+                            <NavDropdown.Item onClick={onUserLogout}>Logout</NavDropdown.Item>
                         </NavDropdown>
                     </Nav>
                 </Navbar.Collapse>
@@ -70,11 +55,16 @@ constructor(props) {
 }
 
 BGICNavbar.propTypes = {
-    currentUser: PropTypes.object.isRequired,
+    currentUser: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
+    onUserLogout: PropTypes.func.isRequired,
 };
 
 BGICNavbar.defaultProps = {
     currentUser: {},
+    onUserLogout: noop,
 };
 
 export default BGICNavbar;

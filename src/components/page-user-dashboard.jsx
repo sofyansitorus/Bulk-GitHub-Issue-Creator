@@ -129,6 +129,7 @@ class BGICPageUserDashboard extends PureComponent {
         } = this.props;
 
         const {
+            ownerSelected,
             repositorySelected,
             assigneesSelected,
             labelsSelected,
@@ -137,9 +138,11 @@ class BGICPageUserDashboard extends PureComponent {
 
         const tabProps = {
             accessToken,
-            repository: repositorySelected ? repositorySelected.full_name : '',
-            assignees: assigneesSelected ? assigneesSelected.map(assignee => assignee.login) : [],
-            labels: labelsSelected ? labelsSelected.map(label => label.name) : [],
+            ownerSelected: ownerSelected,
+            repositorySelected: repositorySelected,
+            assigneesSelected: assigneesSelected,
+            labelsSelected: labelsSelected,
+            milestonesSelected: milestonesSelected,
         };
 
         if (milestonesSelected) {

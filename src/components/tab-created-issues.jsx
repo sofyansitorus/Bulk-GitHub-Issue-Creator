@@ -1,11 +1,16 @@
 import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
+import parseLinkHeader from 'parse-link-header';
 
 import {
+    isEmpty,
+    isEqual,
+    pick,
     assign,
 } from 'lodash';
 
 import {
+    apiSearchIssues,
     apiUpdateIssues,
 } from '../api';
 
@@ -14,28 +19,35 @@ import {
     stopLoading,
     setAlertSuccess,
     setAlertError,
-    getDataCreatedIssues,
-    removeDataCreatedIssue,
-    setDataCreatedIssue,
 } from '../helpers/storage';
-
-import {
-    Alert,
-} from 'react-bootstrap';
 
 import BGICForm from './form';
 import BGICFormIssue from './form-issue';
 import BGICIssueList from './issue-list';
 
 class BGICTabCreatedIssues extends PureComponent {
+    _isMounted = false;
 
     constructor(props) {
         super(props);
 
+        this.resetProps = {
+            'assigneesSelected': [],
+            'labelsSelected': [],
+            'milestonesSelected': false,
+        };
+
         this.state = {
-            edit: false,
-            title: this.props.title,
-            body: this.props.title,
+            editingIssue: false,
+            editingIssueTitle: '',
+            editingIssueBody: '',
+            issues: [],
+            currentPage: 1,
+            totalPages: 1,
+            isFetchingData: false,
+            searchIssuesSort: 'sort:created-desc',
+            searchIssuesStatus: 'is:open',
+            searchIssuesKeyword: '',
         };
 
         this.onFormReset = this.onFormReset.bind(this);
@@ -43,122 +55,310 @@ class BGICTabCreatedIssues extends PureComponent {
         this.onChangeIssueTitle = this.onChangeIssueTitle.bind(this);
         this.onChangeIssueBody = this.onChangeIssueBody.bind(this);
         this.onClickIssueEdit = this.onClickIssueEdit.bind(this);
+        this.onChangePagination = this.onChangePagination.bind(this);
+        this.onChangeFilter = this.onChangeFilter.bind(this);
+    }
+
+    componentDidMount() {
+        this._isMounted = true;
+        this.fetchIssues({ currentPage: 1 });
     }
 
     componentWillReceiveProps(nextProps) {
-        if (nextProps.repository !== this.props.repository) {
-            this.onFormReset();
+        if (!isEqual(nextProps.repositorySelected, this.props.repositorySelected)) {
+            this.setState({
+                editingIssue: false,
+                editingIssueTitle: '',
+                editingIssueBody: '',
+            });
         }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (!this.state.editingIssue) {
+            if (this.state.editingIssue !== prevState.editingIssue) {
+                this.props.onChangeAssignees(this.resetProps.assigneesSelected);
+                this.props.onChangeLabels(this.resetProps.labelsSelected);
+                this.props.onChangeMilestones(this.resetProps.milestonesSelected);
+            } else {
+                const compareProps = [
+                    'ownerSelected',
+                    'repositorySelected',
+                    'assigneesSelected',
+                    'labelsSelected',
+                    'milestonesSelected',
+                ];
+
+                if (!isEqual(pick(prevProps, compareProps), pick(this.props, compareProps))) {
+                    this.fetchIssues({ currentPage: 1 });
+                }
+            }
+        }
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
     }
 
     onFormReset() {
         this.setState({
-            edit: false,
-            title: '',
-            body: '',
+            editingIssue: false,
+            editingIssueTitle: '',
+            editingIssueBody: '',
         });
     }
 
     onFormSubmit() {
         const {
-            edit,
-            title,
-            body,
+            editingIssue,
+            editingIssueTitle,
+            editingIssueBody,
         } = this.state;
 
-        if (!edit) {
+        if (!editingIssue) {
             return;
         }
 
         const {
             accessToken,
-            repository,
-            assignees,
-            labels,
-            milestone,
+            repositorySelected,
+            assigneesSelected,
+            labelsSelected,
+            milestonesSelected,
         } = this.props;
 
         const issueData = {
-            number: edit.number,
-            title,
-            body,
-            assignees,
-            labels,
-            milestone,
+            number: editingIssue.number,
+            title: editingIssueTitle,
+            body: editingIssueBody,
+            assignees: assigneesSelected ? assigneesSelected.map(assignee => assignee.login) : [],
+            labels: labelsSelected ? labelsSelected.map(label => label.name) : [],
+            milestone: milestonesSelected ? milestonesSelected.number : undefined,
         };
 
         startLoading();
 
-        apiUpdateIssues(issueData, repository, accessToken)
-            .then((response) => {
-                stopLoading();
-
-                setDataCreatedIssue(response.data);
-
-                setAlertSuccess({
-                    message: 'Issue %link% has been successfully edited',
-                    linkUrl: response.data.html_url,
-                    linkAnchor: `#${response.data.number}`,
-                });
-            }).catch((error) => {
-                if (error.response && error.response.status === 410) {
-                    removeDataCreatedIssue(edit);
+        apiUpdateIssues(issueData, repositorySelected.full_name, accessToken)
+            .then((responses) => {
+                if (this._isMounted) {
+                    setAlertSuccess(responses.map(response => assign({}, {
+                        message: 'Issue %link% has been successfully edited',
+                        linkUrl: response.data.html_url,
+                        linkAnchor: `#${response.data.number}`,
+                    })));
                 }
-
-                stopLoading();
-
-                setAlertError(error);
+            }).catch((error) => {
+                if (this._isMounted) {
+                    setAlertError(error);
+                }
+            }).finally(() => {
+                if (this._isMounted) {
+                    stopLoading();
+                }
             });
     }
 
-    onChangeIssueTitle(title) {
+    onChangeIssueTitle(editingIssueTitle) {
         this.setState({
+            editingIssueTitle,
+        });
+    }
+
+    onChangeIssueBody(editingIssueBody) {
+        this.setState({
+            editingIssueBody,
+        });
+    }
+
+    onClickIssueEdit(editingIssue) {
+        if (!editingIssue) {
+            return;
+        }
+
+        this.resetProps = pick(this.props, [
+            'assigneesSelected',
+            'labelsSelected',
+            'milestonesSelected',
+        ]);
+
+        const {
             title,
-        });
-    }
-
-    onChangeIssueBody(body) {
-        this.setState({
             body,
+        } = editingIssue;
+
+        this.setState({
+            editingIssueTitle: title,
+            editingIssueBody: body,
+            editingIssue,
+        });
+
+        this.props.onChangeAssignees(editingIssue.assignees);
+        this.props.onChangeLabels(editingIssue.labels);
+        this.props.onChangeMilestones(editingIssue.milestone);
+    }
+
+    onChangePagination(page) {
+        const {
+            currentPage,
+            totalPages,
+        } = this.state;
+
+        if (!page || page > totalPages || page < 1 || page === currentPage) {
+            return;
+        }
+
+        this.setState({
+            currentPage: page,
+        });
+
+        this.fetchIssues({
+            currentPage: page,
         });
     }
 
-    onClickIssueEdit(edit) {
-        if (!edit) {
+    onChangeFilter(name, value) {
+        this.setState({
+            [`${name}`]: value,
+        });
+
+        const currentPage = name === 'searchIssuesSort' ? this.state.currentPage : 1;
+
+        this.fetchIssues({
+            [`${name}`]: value,
+            currentPage,
+        });
+    }
+
+    fetchIssues(params = {}) {
+        const {
+            accessToken,
+            ownerSelected,
+        } = this.props;
+
+
+        if (!ownerSelected) {
             return;
         }
 
         const {
-            title,
-            body,
-        } = edit;
+            isFetchingData,
+        } = this.state;
 
-        this.setState({
-            title,
-            body,
-            edit,
-        });
+        if (!isFetchingData) {
+            this.setState({
+                isFetchingData: true,
+            });
+        }
 
-        this.props.onChangeAssignees(edit.assignees.map(assignee => assign({}, assignee, {
-            value: assignee.login,
-            label: assignee.login,
-        })));
+        apiSearchIssues(this.getFetchIssuesQuery(params), accessToken)
+            .then((response) => {
+                if (this._isMounted) {
+                    const newState = {
+                        isFetchingData: false,
+                        issues: response.data.items,
+                    };
 
-        this.props.onChangeLabels(edit.labels.map(label => assign({}, label, {
-            value: label.name,
-            label: label.name,
-        })));
+                    const linkHeader = parseLinkHeader(response.headers.link);
+
+                    if (linkHeader && linkHeader.last) {
+                        newState.totalPages = parseInt(linkHeader.last.page);
+                    } else if (linkHeader && linkHeader.prev) {
+                        newState.totalPages = parseInt(linkHeader.prev.page) + 1;
+                    } else {
+                        newState.totalPages = 1;
+                    }
+
+                    this.setState(assign({}, newState, params));
+                }
+            }).catch((error) => {
+                if (this._isMounted) {
+                    this.setState({
+                        isFetchingData: false,
+                        issues: error,
+                        totalPages: 1,
+                        currentPage: 1,
+                    });
+                }
+            });
+    }
+
+    getFetchIssuesQuery(params = {}) {
+        const {
+            ownerSelected,
+            repositorySelected,
+            assigneesSelected,
+            labelsSelected,
+            milestonesSelected,
+        } = this.props;
+
+        const queries = ['type:issue'];
+
+        if (repositorySelected) {
+            queries.push(`repo:${repositorySelected.full_name}`);
+        } else if (ownerSelected) {
+            queries.push(`${ownerSelected.type}:${ownerSelected.login}`);
+        }
+
+        if (assigneesSelected && assigneesSelected.length) {
+            queries.push(...assigneesSelected.map(assignee => {
+                if (assignee.login.indexOf(' ') === -1) {
+                    return `assignee:${assignee.login}`;
+                }
+
+                return `assignee:"${assignee.login}"`;
+            }));
+        }
+
+        if (labelsSelected && labelsSelected.length) {
+            queries.push(...labelsSelected.map(label => {
+                if (label.name.indexOf(' ') === -1) {
+                    return `label:${label.name}`;
+                }
+
+                return `label:"${label.name}"`;
+            }));
+        }
+
+        if (milestonesSelected) {
+            queries.push(`milestone:"${milestonesSelected.title}"`);
+        }
+
+        const searchIssuesSort = params.searchIssuesSort || this.state.searchIssuesSort;
+        if (searchIssuesSort) {
+            queries.push(searchIssuesSort);
+        }
+
+        const searchIssuesStatus = params.searchIssuesStatus || this.state.searchIssuesStatus;
+        if (searchIssuesStatus) {
+            queries.push(searchIssuesStatus);
+        }
+
+        const searchIssuesKeyword = params.searchIssuesKeyword || this.state.searchIssuesKeyword;
+        if (searchIssuesKeyword) {
+            if (searchIssuesKeyword.indexOf(' ') === -1) {
+                queries.push(searchIssuesKeyword);
+            } else {
+                queries.push(`"${searchIssuesKeyword}"`);
+            }
+        }
+
+        const currentPage = params.currentPage || this.state.currentPage;
+
+        return {
+            page: currentPage,
+            q: queries.map(query => query.trim()).filter(query => !isEmpty(query)).join(' '),
+        };
     }
 
     renderFormEdit() {
         const {
-            edit,
-            title,
-            body,
+            editingIssue,
+            editingIssueTitle,
+            editingIssueBody,
         } = this.state;
 
-        if (!edit) {
-            return null
+        if (!editingIssue) {
+            return null;
         }
 
         return (
@@ -169,8 +369,8 @@ class BGICTabCreatedIssues extends PureComponent {
                 onFormSubmit={this.onFormSubmit}
             >
                 <BGICFormIssue
-                    issueTitle={title}
-                    issueBody={body}
+                    issueTitle={editingIssueTitle}
+                    issueBody={editingIssueBody}
                     onChangeIssueTitle={this.onChangeIssueTitle}
                     onChangeIssueBody={this.onChangeIssueBody}
                 />
@@ -180,41 +380,51 @@ class BGICTabCreatedIssues extends PureComponent {
 
     renderIssuesList() {
         const {
-            edit,
+            editingIssue,
+            issues,
+            currentPage,
+            totalPages,
+            isFetchingData,
+            searchIssuesSort,
+            searchIssuesStatus,
+            searchIssuesKeyword,
         } = this.state;
 
-        if (edit) {
+        if (editingIssue) {
             return null
         }
 
         const {
-            repository,
+            ownerSelected,
+            repositorySelected,
         } = this.props;
 
-        if (!repository) {
-            return (
-                <Alert variant="secondary" className="mb-0">
-                    No repository selected
-                </Alert>
-            );
-        }
+        const getIssues = () => {
+            if (!ownerSelected) {
+                return new Error('No user or organization selected');
+            }
 
-        const issues = getDataCreatedIssues(repository.full_name);
+            return issues;
+        };
 
-        if (!issues.length) {
-            return (
-                <Alert variant="secondary" className="mb-0">
-                    No record found
-                </Alert>
-            );
-        }
+        const filterParams = {
+            searchIssuesSort,
+            searchIssuesStatus,
+            searchIssuesKeyword,
+        };
 
         return (
             <BGICIssueList
-                issues={issues.map(issue => assign({}, issue, { urlView: issue.html_url }))}
-                onEdit={this.onClickIssueEdit}
-                buttonEdit
-                buttonView
+                isFetchingData={isFetchingData}
+                issues={getIssues()}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onChangePagination={this.onChangePagination}
+                filterParams={filterParams}
+                onChangeFilterParams={this.onChangeFilter}
+                buttonEditVisible={!isEmpty(repositorySelected)}
+                buttonEditHandler={this.onClickIssueEdit}
+                buttonViewVisible
             />
         );
     }
@@ -230,18 +440,27 @@ class BGICTabCreatedIssues extends PureComponent {
 }
 
 BGICTabCreatedIssues.propTypes = {
-    title: PropTypes.string.isRequired,
-    body: PropTypes.string.isRequired,
     accessToken: PropTypes.string.isRequired,
-    repository: PropTypes.string.isRequired,
-    assignees: PropTypes.array,
-    labels: PropTypes.array,
-    milestone: PropTypes.number,
-};
-
-BGICTabCreatedIssues.defaultProps = {
-    title: '',
-    body: '',
+    ownerSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
+    repositorySelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
+    assigneesSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.array,
+    ]).isRequired,
+    labelsSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.array,
+    ]).isRequired,
+    milestonesSelected: PropTypes.oneOfType([
+        PropTypes.bool,
+        PropTypes.object,
+    ]).isRequired,
 };
 
 export default BGICTabCreatedIssues;

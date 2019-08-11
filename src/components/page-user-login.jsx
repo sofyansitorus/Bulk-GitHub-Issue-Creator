@@ -1,4 +1,5 @@
 import React, { PureComponent } from 'react';
+import PropTypes from 'prop-types';
 
 import {
     noop,
@@ -17,25 +18,30 @@ import {
     startLoading,
     stopLoading,
     setAlertError,
-    setAuthentication,
 } from '../helpers/storage';
 
 import BGICForm from './form';
 
 class BGICPageUserLogin extends PureComponent {
+    _isMounted = false;
+
     constructor(props) {
         super(props);
 
         this.state = {
-            isValidated: false,
-            isLoading: false,
-            alertType: '',
-            alertText: '',
             accessToken: '',
         }
 
         this.onFormSubmit = this.onFormSubmit.bind(this);
         this.onChangeAccessToken = this.onChangeAccessToken.bind(this);
+    }
+
+    componentDidMount() {
+        this._isMounted = true;
+    }
+
+    componentWillUnmount() {
+        this._isMounted = false;
     }
 
     onChangeAccessToken(event) {
@@ -51,12 +57,18 @@ class BGICPageUserLogin extends PureComponent {
 
         apiAuth(this.state.accessToken)
             .then((response) => {
-                stopLoading();
-                setAuthentication(this.state.accessToken, response.data);
+                if (this._isMounted) {
+                    this.props.onUserLogin(this.state.accessToken, response.data);
+                }
             })
             .catch((error) => {
-                stopLoading();
-                setAlertError(error);
+                if (this._isMounted) {
+                    setAlertError(error);
+                }
+            }).finally(() => {
+                if (this._isMounted) {
+                    stopLoading();
+                }
             });
     }
 
@@ -96,5 +108,13 @@ class BGICPageUserLogin extends PureComponent {
         );
     }
 }
+
+BGICPageUserLogin.propTypes = {
+    onUserLogin: PropTypes.func.isRequired,
+};
+
+BGICPageUserLogin.defaultProps = {
+    onUserLogin: noop,
+};
 
 export default BGICPageUserLogin;
