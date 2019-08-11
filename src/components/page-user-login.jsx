@@ -45,8 +45,6 @@ class BGICPageUserLogin extends PureComponent {
     }
 
     onChangeAccessToken(event) {
-        event.preventDefault();
-
         this.setState({
             accessToken: event.target.value,
         });

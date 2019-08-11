@@ -44,7 +44,10 @@ class BGICTabImportMultipleIssue extends PureComponent {
             editingIssue: false,
             editingIssueTitle: '',
             editingIssueBody: '',
-            dataDelimiter: ',',
+            importMethod: 'upload',
+            dataType: 'json',
+            importedText: '',
+            dataSeparator: ',',
             issues: getDataImportedIssues(),
         };
 
@@ -55,8 +58,13 @@ class BGICTabImportMultipleIssue extends PureComponent {
         this.onChangeIssueBody = this.onChangeIssueBody.bind(this);
         this.onClickIssueEdit = this.onClickIssueEdit.bind(this);
         this.onClickIssueDelete = this.onClickIssueDelete.bind(this);
-        this.onChangeDataDelimiter = this.onChangeDataDelimiter.bind(this);
-        this.onSelectCSVFile = this.onSelectCSVFile.bind(this);
+        this.onChangeDataType = this.onChangeDataType.bind(this);
+        this.onChangeDataSeparator = this.onChangeDataSeparator.bind(this);
+        this.onChangeImportMethod = this.onChangeImportMethod.bind(this);
+        this.onChangeUpload = this.onChangeUpload.bind(this);
+        this.onChangePaste = this.onChangePaste.bind(this);
+        this.onParseImportedText = this.onParseImportedText.bind(this);
+        this.onDownloadSample = this.onDownloadSample.bind(this);
     }
 
     componentDidMount() {
@@ -89,6 +97,10 @@ class BGICTabImportMultipleIssue extends PureComponent {
                 editingIssueBody: '',
             });
         } else {
+            this.setState({
+                importedText: '',
+            });
+
             removeDataImportedIssues();
         }
     }
@@ -181,60 +193,164 @@ class BGICTabImportMultipleIssue extends PureComponent {
         removeDataImportedIssue(issue);
     }
 
-    onChangeDataDelimiter(event) {
-        event.preventDefault();
-
+    onChangeDataType(event) {
         this.setState({
-            dataDelimiter: event.target.value,
+            dataType: event.target.value,
+            importedText: '',
         });
     }
 
-    onSelectCSVFile(event) {
-        event.preventDefault();
+    onChangeImportMethod(event) {
+        this.setState({
+            importMethod: event.target.value,
+        });
+    }
 
-        /**
-         * Wrapped csv line parser
-         * @param s string delimited csv string
-         * @param sep separator override
-         * @attribution : http://www.greywyvern.com/?post=258 (comments closed on blog :( )
-         */
-        const parseCSV = (s, sep) => {
-            const a = s.split(/\r\n|\r|\n/g);
+    onChangeDataSeparator(event) {
+        this.setState({
+            dataSeparator: event.target.value,
+        });
+    }
 
-            for (var i in a) {
-                for (var f = a[i].split(sep = sep || ","), x = f.length - 1, tl; x >= 0; x--) {
-                    if (f[x].replace(/"\s+$/, '"').charAt(f[x].length - 1) === '"') {
-                        if ((tl = f[x].replace(/^\s+"/, '"')).length > 1 && tl.charAt(0) === '"') {
-                            f[x] = f[x].replace(/^\s*"|"\s*$/g, '').replace(/""/g, '"');
-                        } else if (x) {
-                            f.splice(x - 1, 2, [f[x - 1], f[x]].join(sep));
-                        } else f = f.shift().split(sep).concat(f);
-                    } else f[x].replace(/""/g, '"');
-                }
+    onChangeUpload(event) {
+        const {
+            importMethod,
+        } = this.state;
 
-                a[i] = f;
-            }
-
-            return a;
+        if (importMethod !== 'upload') {
+            return;
         }
 
-        try {
-            const fileReader = new FileReader();
+        if (event.target.files.length) {
+            try {
+                const fileReader = new FileReader();
 
-            fileReader.onloadend = (event) => {
-                const issues = parseCSV(event.target.result.toString(), this.state.dataDelimiter).map((issue, id) => assign({}, {
+                fileReader.onloadend = (event) => {
+                    this.setState({
+                        importedText: event.target.result.toString(),
+                    });
+                };
+
+                fileReader.readAsText(event.target.files[0]);
+            } catch (error) {
+                setAlertError(error);
+            }
+        } else {
+            this.setState({
+                importedText: '',
+            });
+        }
+    }
+
+    onChangePaste(event) {
+        const {
+            importMethod,
+        } = this.state;
+
+        if (importMethod !== 'paste') {
+            return;
+        }
+
+        this.setState({
+            importedText: event.target.value,
+        });
+    }
+
+    onParseImportedText() {
+        const {
+            dataType,
+            importedText,
+            dataSeparator,
+        } = this.state;
+
+        try {
+            let issues = [];
+
+            if (dataType === 'json') {
+                issues = JSON.parse(importedText).map(issue => assign({}, issue, {
+                    id: uniqueId(),
+                }));
+            } else {
+                /**
+                 * Wrapped csv line parser
+                 * @param s string delimited csv string
+                 * @param sep separator override
+                 * @attribution : http://www.greywyvern.com/?post=258 (comments closed on blog :( )
+                 */
+                const CSVParse = (s, sep) => {
+                    const a = s.split(/\r\n|\r|\n/g);
+
+                    for (var i in a) {
+                        for (var f = a[i].split(sep = sep || ","), x = f.length - 1, tl; x >= 0; x--) {
+                            if (f[x].replace(/"\s+$/, '"').charAt(f[x].length - 1) === '"') {
+                                if ((tl = f[x].replace(/^\s+"/, '"')).length > 1 && tl.charAt(0) === '"') {
+                                    f[x] = f[x].replace(/^\s*"|"\s*$/g, '').replace(/""/g, '"');
+                                } else if (x) {
+                                    f.splice(x - 1, 2, [f[x - 1], f[x]].join(sep));
+                                } else f = f.shift().split(sep).concat(f);
+                            } else f[x].replace(/""/g, '"');
+                        }
+
+                        a[i] = f;
+                    }
+
+                    return a;
+                }
+
+                issues = CSVParse(importedText, dataSeparator).map(issue => assign({}, {
                     id: uniqueId(),
                     title: get(issue, '0', ''),
                     body: get(issue, '1', ''),
                 }));
+            }
 
-                setDataImportedIssues(issues);
-            };
+            setDataImportedIssues(issues);
 
-            fileReader.readAsText(event.target.files[0]);
+            this.setState({
+                importedText: '',
+            });
         } catch (error) {
             setAlertError(error);
         }
+    }
+
+    onDownloadSample() {
+        const {
+            dataType,
+        } = this.state;
+
+        const sampleMIME = dataType === 'json' ? 'aplication/json' : 'text/csv';
+        const sampleName = `sample.${dataType}`;
+
+        const hiddenElement = document.createElement('a');
+        hiddenElement.style.display = 'none';
+        hiddenElement.href = `data:${sampleMIME};charset=utf-8,${encodeURI(this.generateSample())}`;
+        hiddenElement.download = sampleName;
+        document.body.appendChild(hiddenElement);
+        hiddenElement.click();
+        document.body.removeChild(hiddenElement);
+    }
+
+    generateSample() {
+        const {
+            dataType,
+            dataSeparator,
+        } = this.state;
+
+        const sampleCount = 3;
+        const sampleLines = [];
+
+        for (let index = 1; index <= sampleCount; index++) {
+            if (dataType === 'json') {
+                sampleLines.push(`${"\t"}{"title":"Issue Title ${index}", "body":"Issue Body ${index}"}`);
+            } else {
+                sampleLines.push(`"Issue Title ${index}"${dataSeparator}"Issue Body ${index}"`);
+            }
+        }
+
+        return dataType === 'json'
+            ? `[${"\n"}${sampleLines.join(`,${"\n"}`)}${"\n"}]`
+            : `${sampleLines.join("\n")}`;
     }
 
     renderFormEdit() {
@@ -269,6 +385,10 @@ class BGICTabImportMultipleIssue extends PureComponent {
         const {
             editingIssue,
             issues,
+            dataType,
+            dataSeparator,
+            importMethod,
+            importedText,
         } = this.state;
 
         if (editingIssue !== false) {
@@ -284,9 +404,35 @@ class BGICTabImportMultipleIssue extends PureComponent {
 
             }
             : {
+                buttonSubmitText: 'Parse Data',
+                buttonSubmitDisabled: !importedText.length,
+                onFormSubmit: this.onParseImportedText,
                 buttonReset: false,
-                buttonSubmit: false,
             };
+
+        const types = [{
+            value: 'json',
+            label: 'JSON',
+        }, {
+            value: 'csv',
+            label: 'CSV',
+        }];
+
+        const methods = [{
+            value: 'upload',
+            label: 'Upload File',
+        }, {
+            value: 'paste',
+            label: 'Copy & Paste',
+        }];
+
+        const separators = [{
+            value: ',',
+            label: 'Comma',
+        }, {
+            value: ';',
+            label: 'Semicolon',
+        }];
 
         const formContentOutput = issues.length
             ? (
@@ -301,37 +447,82 @@ class BGICTabImportMultipleIssue extends PureComponent {
             : (
                 <React.Fragment>
                     <Form.Group as={Row}>
-                        <Form.Label column sm={4}>CSV Data Delimiter</Form.Label>
+                        <Form.Label column sm={4}>Data Type</Form.Label>
                         <Col sm={8}>
-                            <Form.Control
-                                as="select"
-                                defaultValue={this.state.dataDelimiter}
-                                onChange={this.onChangeDataDelimiter}
-                            >
-                                <option value=",">Comma</option>
-                                <option value=";">Semicolon</option>
-                            </Form.Control>
+                            {types.map(type => (<Form.Check
+                                type="radio"
+                                name="type"
+                                id={`type-${type.value}`}
+                                key={type.value}
+                                value={type.value}
+                                label={type.label}
+                                onChange={this.onChangeDataType}
+                                checked={dataType === type.value}
+                                inline
+                            />))}
                         </Col>
                     </Form.Group>
+                    {dataType === 'csv' && <Form.Group as={Row}>
+                        <Form.Label column sm={4}>Data Separator</Form.Label>
+                        <Col sm={8}>
+                            {separators.map(separator => (<Form.Check
+                                type="radio"
+                                name="separator"
+                                id={`separator-${separator.value}`}
+                                key={separator.value}
+                                value={separator.value}
+                                label={separator.label}
+                                onChange={this.onChangeDataSeparator}
+                                checked={dataSeparator === separator.value}
+                                inline
+                            />))}
+                        </Col>
+                    </Form.Group>}
                     <Form.Group as={Row}>
-                        <Form.Label column sm={4}>CSV File Data</Form.Label>
+                        <Form.Label column sm={4}>Method</Form.Label>
+                        <Col sm={8}>
+                            {methods.map(method => (<Form.Check
+                                type="radio"
+                                name="method"
+                                id={`method-${method.value}`}
+                                key={method.value}
+                                value={method.value}
+                                label={method.label}
+                                onChange={this.onChangeImportMethod}
+                                checked={importMethod === method.value}
+                                inline
+                            />))}
+                        </Col>
+                    </Form.Group>
+                    {importMethod === 'upload' && <Form.Group as={Row}>
+                        <Form.Label column sm={4}></Form.Label>
                         <Col sm={8}>
                             <Form.Control
                                 type="file"
-                                accept=".csv"
-                                onChange={this.onSelectCSVFile}
+                                accept={`.${dataType}`}
+                                onChange={this.onChangeUpload}
                             />
                             <Button
                                 className="p-0 mt-2"
                                 variant="link"
-                                href="https://github.com/sofyansitorus/Bulk-GitHub-Issue-Creator/blob/master/sample.csv"
-                                target="_blank"
-                                value="Download CSV sample"
+                                onClick={this.onDownloadSample}
                             >
-                                Download CSV sample
+                                {`Download ${dataType.toUpperCase()} sample`}
                             </Button>
                         </Col>
-                    </Form.Group>
+                    </Form.Group>}
+                    {importMethod === 'paste' && <Form.Group as={Row}>
+                        <Form.Label column sm={4}></Form.Label>
+                        <Col sm={8}>
+                            <Form.Control
+                                as="textarea"
+                                rows="10"
+                                onChange={this.onChangePaste}
+                                placeholder={`Example:${"\n"}${this.generateSample()}`}
+                                value={importedText}
+                            />
+                        </Col>
+                    </Form.Group>}
                 </React.Fragment>
             );
 
