@@ -45,14 +45,10 @@ class BGICFormIssue extends PureComponent {
     }
 
     onChangeIssueTitle(event) {
-        event.preventDefault();
-
         this.props.onChangeIssueTitle(event.target.value);
     }
 
     onChangeIssueBody(event) {
-        event.preventDefault();
-
         this.props.onChangeIssueBody(event.target.value);
     }
 

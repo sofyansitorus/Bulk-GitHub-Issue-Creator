@@ -191,8 +191,10 @@ class BGICForm extends PureComponent {
             buttonSize,
             buttonBlock,
             buttonReset,
+            buttonResetDisabled,
             buttonResetText,
             buttonSubmit,
+            buttonSubmitDisabled,
             buttonSubmitText,
         } = this.props;
 
@@ -205,8 +207,8 @@ class BGICForm extends PureComponent {
                 buttonText: buttonResetText,
                 size: buttonSize,
                 block: buttonBlock,
-                disabled: this.state.isLoading,
-                className: buttonSubmit && !buttonBlock ? 'float-left' : '',
+                className: !buttonBlock ? 'float-left' : '',
+                disabled: this.state.isLoading || buttonResetDisabled,
             });
         }
 
@@ -217,8 +219,9 @@ class BGICForm extends PureComponent {
                 buttonText: buttonSubmitText,
                 size: buttonSize,
                 block: buttonBlock,
+                className: !buttonBlock ? 'float-right' : '',
                 isLoading: this.state.isLoading,
-                className: buttonReset && !buttonBlock ? 'float-right' : '',
+                disabled: this.state.isLoading || buttonSubmitDisabled,
             });
         }
 
@@ -256,6 +259,7 @@ BGICForm.propTypes = {
     buttonBlock: PropTypes.bool.isRequired,
 
     buttonReset: PropTypes.bool.isRequired,
+    buttonResetDisabled: PropTypes.bool.isRequired,
     buttonResetText: PropTypes.string.isRequired,
     onFormReset: PropTypes.oneOfType([
         PropTypes.func,
@@ -263,6 +267,7 @@ BGICForm.propTypes = {
     ]).isRequired,
 
     buttonSubmit: PropTypes.bool.isRequired,
+    buttonSubmitDisabled: PropTypes.bool.isRequired,
     buttonSubmitText: PropTypes.string.isRequired,
     onFormSubmit: PropTypes.oneOfType([
         PropTypes.func,
@@ -276,10 +281,12 @@ BGICForm.defaultProps = {
     buttonBlock: false,
 
     buttonReset: true,
+    buttonResetDisabled: false,
     buttonResetText: 'Reset',
     onFormReset: false,
 
     buttonSubmit: true,
+    buttonSubmitDisabled: false,
     buttonSubmitText: 'Submit',
     onFormSubmit: false,
 };
