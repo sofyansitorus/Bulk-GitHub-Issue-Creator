@@ -164,6 +164,8 @@ class BGICPageUserDashboard extends PureComponent {
             title: 'Created Issues',
             content: BGICTabCreatedIssues,
             props: assign({}, tabProps, {
+                onChangeOwner: this.onChangeOwner,
+                onChangeRepository: this.onChangeRepository,
                 onChangeAssignees: this.onChangeAssignees,
                 onChangeLabels: this.onChangeLabels,
                 onChangeMilestones: this.onChangeMilestones,

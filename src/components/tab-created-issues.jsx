@@ -7,6 +7,8 @@ import {
     isEqual,
     pick,
     assign,
+    keys,
+    get,
 } from 'lodash';
 
 import {
@@ -32,10 +34,14 @@ class BGICTabCreatedIssues extends PureComponent {
         super(props);
 
         this.resetProps = {
+            'ownerSelected': false,
+            'repositorySelected': false,
             'assigneesSelected': [],
             'labelsSelected': [],
             'milestonesSelected': false,
         };
+
+        this.fetchIssuesAfterEdit = false;
 
         this.state = {
             editingIssue: false,
@@ -75,23 +81,26 @@ class BGICTabCreatedIssues extends PureComponent {
     }
 
     componentDidUpdate(prevProps, prevState) {
-        if (!this.state.editingIssue) {
-            if (this.state.editingIssue !== prevState.editingIssue) {
+        const compares = keys(this.resetProps);
+        const editingIssueId = get(this.state, 'editingIssue.id');
+        const editingIssueIdPrev = get(prevState, 'editingIssue.id');
+
+        if (isEqual(editingIssueId, editingIssueIdPrev) && !editingIssueId) {
+            if (this.fetchIssuesAfterEdit) {
+                this.fetchIssuesAfterEdit = false;
+                this.fetchIssues();
+            } else if (!isEqual(pick(prevProps, compares), pick(this.props, compares)) && !isEqual(this.resetProps, pick(this.props, compares))) {
+                this.fetchIssues({ currentPage: 1 });
+            }
+        } else if (!isEqual(editingIssueId, editingIssueIdPrev)) {
+            if (editingIssueId) {
+                this.resetProps = pick(prevProps, compares);
+            } else {
+                this.props.onChangeOwner(this.resetProps.ownerSelected);
+                this.props.onChangeRepository(this.resetProps.repositorySelected);
                 this.props.onChangeAssignees(this.resetProps.assigneesSelected);
                 this.props.onChangeLabels(this.resetProps.labelsSelected);
                 this.props.onChangeMilestones(this.resetProps.milestonesSelected);
-            } else {
-                const compareProps = [
-                    'ownerSelected',
-                    'repositorySelected',
-                    'assigneesSelected',
-                    'labelsSelected',
-                    'milestonesSelected',
-                ];
-
-                if (!isEqual(pick(prevProps, compareProps), pick(this.props, compareProps))) {
-                    this.fetchIssues({ currentPage: 1 });
-                }
             }
         }
     }
@@ -127,7 +136,7 @@ class BGICTabCreatedIssues extends PureComponent {
             milestonesSelected,
         } = this.props;
 
-        const issueData = {
+        const issueDataNew = {
             number: editingIssue.number,
             title: editingIssueTitle,
             body: editingIssueBody,
@@ -136,9 +145,22 @@ class BGICTabCreatedIssues extends PureComponent {
             milestone: milestonesSelected ? milestonesSelected.number : null,
         };
 
+        const issueDataOld = {
+            number: editingIssue.number,
+            title: editingIssue.title,
+            body: editingIssue.body,
+            assignees: editingIssue.assignees ? editingIssue.assignees.map(assignee => assignee.login) : [],
+            labels: editingIssue.labels ? editingIssue.labels.map(label => label.name) : [],
+            milestone: editingIssue.milestone ? editingIssue.milestone.number : null,
+        };
+
+        if (isEqual(issueDataNew, issueDataOld)) {
+            return setAlertError('No changes have been made');
+        }
+
         startLoading();
 
-        apiUpdateIssues(issueData, repositorySelected.full_name, accessToken)
+        apiUpdateIssues(issueDataNew, repositorySelected.full_name, accessToken)
             .then((responses) => {
                 if (this._isMounted) {
                     setAlertSuccess(responses.map(response => assign({}, {
@@ -146,6 +168,12 @@ class BGICTabCreatedIssues extends PureComponent {
                         linkUrl: response.data.html_url,
                         linkAnchor: `#${response.data.number}`,
                     })));
+
+                    this.fetchIssuesAfterEdit = true;
+
+                    this.setState({
+                        editingIssue: responses[0].data,
+                    });
                 }
             }).catch((error) => {
                 if (this._isMounted) {
@@ -174,12 +202,6 @@ class BGICTabCreatedIssues extends PureComponent {
         if (!editingIssue) {
             return;
         }
-
-        this.resetProps = pick(this.props, [
-            'assigneesSelected',
-            'labelsSelected',
-            'milestonesSelected',
-        ]);
 
         const {
             title,
@@ -461,6 +483,11 @@ BGICTabCreatedIssues.propTypes = {
         PropTypes.bool,
         PropTypes.object,
     ]).isRequired,
+    onChangeOwner: PropTypes.func.isRequired,
+    onChangeRepository: PropTypes.func.isRequired,
+    onChangeAssignees: PropTypes.func.isRequired,
+    onChangeLabels: PropTypes.func.isRequired,
+    onChangeMilestones: PropTypes.func.isRequired,
 };
 
 export default BGICTabCreatedIssues;

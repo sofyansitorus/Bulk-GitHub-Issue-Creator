@@ -203,6 +203,7 @@ class BGICTabImportMultipleIssue extends PureComponent {
     onChangeImportMethod(event) {
         this.setState({
             importMethod: event.target.value,
+            importedText: '',
         });
     }
 
@@ -447,8 +448,8 @@ class BGICTabImportMultipleIssue extends PureComponent {
             : (
                 <React.Fragment>
                     <Form.Group as={Row}>
-                        <Form.Label column sm={4}>Data Type</Form.Label>
-                        <Col sm={8}>
+                        <Form.Label column sm={3}>Data Type</Form.Label>
+                        <Col sm={9}>
                             {types.map(type => (<Form.Check
                                 type="radio"
                                 name="type"
@@ -463,8 +464,8 @@ class BGICTabImportMultipleIssue extends PureComponent {
                         </Col>
                     </Form.Group>
                     {dataType === 'csv' && <Form.Group as={Row}>
-                        <Form.Label column sm={4}>Data Separator</Form.Label>
-                        <Col sm={8}>
+                        <Form.Label column sm={3}>Data Separator</Form.Label>
+                        <Col sm={9}>
                             {separators.map(separator => (<Form.Check
                                 type="radio"
                                 name="separator"
@@ -479,8 +480,8 @@ class BGICTabImportMultipleIssue extends PureComponent {
                         </Col>
                     </Form.Group>}
                     <Form.Group as={Row}>
-                        <Form.Label column sm={4}>Method</Form.Label>
-                        <Col sm={8}>
+                        <Form.Label column sm={3}>Method</Form.Label>
+                        <Col sm={9}>
                             {methods.map(method => (<Form.Check
                                 type="radio"
                                 name="method"
@@ -495,8 +496,8 @@ class BGICTabImportMultipleIssue extends PureComponent {
                         </Col>
                     </Form.Group>
                     {importMethod === 'upload' && <Form.Group as={Row}>
-                        <Form.Label column sm={4}></Form.Label>
-                        <Col sm={8}>
+                        <Form.Label column sm={3}></Form.Label>
+                        <Col sm={9}>
                             <Form.Control
                                 type="file"
                                 accept={`.${dataType}`}
@@ -512,8 +513,8 @@ class BGICTabImportMultipleIssue extends PureComponent {
                         </Col>
                     </Form.Group>}
                     {importMethod === 'paste' && <Form.Group as={Row}>
-                        <Form.Label column sm={4}></Form.Label>
-                        <Col sm={8}>
+                        <Form.Label column sm={3}></Form.Label>
+                        <Col sm={9}>
                             <Form.Control
                                 as="textarea"
                                 rows="10"
