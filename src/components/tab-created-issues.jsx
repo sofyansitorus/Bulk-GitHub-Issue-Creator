@@ -133,7 +133,7 @@ class BGICTabCreatedIssues extends PureComponent {
             body: editingIssueBody,
             assignees: assigneesSelected ? assigneesSelected.map(assignee => assignee.login) : [],
             labels: labelsSelected ? labelsSelected.map(label => label.name) : [],
-            milestone: milestonesSelected ? milestonesSelected.number : undefined,
+            milestone: milestonesSelected ? milestonesSelected.number : null,
         };
 
         startLoading();
