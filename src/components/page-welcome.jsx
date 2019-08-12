@@ -16,14 +16,14 @@ class BGICPageWelcome extends PureComponent {
                 <Row>
                     <Col md={6} className="mt-5">
                         <h1>Bulk GitHub Issue Creator</h1>
-                        <p>A lightweigt, fast & responsive bulk issues creator for GitHub! Create a bunch of issues all at once by importing JSON or CSV file.</p>
+                        <p>A lightweight, fast & responsive GitHub issues in bulk or individually! Create a bunch of issues all at once by importing JSON or CSV file.</p>
 
                         <h5>Key Features:</h5>
                         <ul>
+                            <li>Create bulk issues by impoting JSON/CSV file</li>
+                            <li>Create bulk issues by copy & paste JSON/CSV formatted text</li>
                             <li>Create single issue</li>
-                            <li>Create bulk issues by impoting JSON & CSV file</li>
-                            <li>Create bulk issues by copy & paste JSON & CSV formatted text</li>
-                            <li>Edit existing issues</li>
+                            <li>Edit existing issue</li>
                             <li>Markdown editor & preview</li>
                         </ul>
                     </Col>
