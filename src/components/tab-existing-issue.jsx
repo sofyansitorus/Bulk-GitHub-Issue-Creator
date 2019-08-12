@@ -27,7 +27,7 @@ import BGICForm from './form';
 import BGICFormIssue from './form-issue';
 import BGICIssueList from './issue-list';
 
-class BGICTabCreatedIssues extends PureComponent {
+class BGICTabExistingIssue extends PureComponent {
     _isMounted = false;
 
     constructor(props) {
@@ -461,7 +461,7 @@ class BGICTabCreatedIssues extends PureComponent {
     }
 }
 
-BGICTabCreatedIssues.propTypes = {
+BGICTabExistingIssue.propTypes = {
     accessToken: PropTypes.string.isRequired,
     ownerSelected: PropTypes.oneOfType([
         PropTypes.bool,
@@ -490,4 +490,4 @@ BGICTabCreatedIssues.propTypes = {
     onChangeMilestones: PropTypes.func.isRequired,
 };
 
-export default BGICTabCreatedIssues;
+export default BGICTabExistingIssue;

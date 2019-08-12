@@ -15,9 +15,9 @@ import {
     Col,
 } from 'react-bootstrap';
 
-import BGICTabCreateSingleSingle from './tab-create-single-issue';
-import BGICTabImportMultipleIssue from './tab-import-multiple-issue';
-import BGICTabCreatedIssues from './tab-created-issues';
+import BGICTabSingleIssue from './tab-single-issue';
+import BGICTabMultipleIssue from './tab-multiple-issue';
+import BGICTabExistingIssue from './tab-existing-issue';
 import BGICSidebar from './sidebar';
 
 class BGICPageUserDashboard extends PureComponent {
@@ -152,17 +152,17 @@ class BGICPageUserDashboard extends PureComponent {
         const tabs = [{
             eventKey: 'single',
             title: 'Create Single Issue',
-            content: BGICTabCreateSingleSingle,
+            content: BGICTabSingleIssue,
             props: tabProps,
         }, {
             eventKey: 'imported',
             title: 'Import Multiple Issue',
-            content: BGICTabImportMultipleIssue,
+            content: BGICTabMultipleIssue,
             props: tabProps,
         }, {
             eventKey: 'created',
             title: 'Created Issues',
-            content: BGICTabCreatedIssues,
+            content: BGICTabExistingIssue,
             props: assign({}, tabProps, {
                 onChangeOwner: this.onChangeOwner,
                 onChangeRepository: this.onChangeRepository,
