@@ -277,7 +277,7 @@ BGICForm.propTypes = {
 
 BGICForm.defaultProps = {
     formTitle: '',
-    buttonSize: 'lg',
+    buttonSize: '',
     buttonBlock: false,
 
     buttonReset: true,

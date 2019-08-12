@@ -19,7 +19,7 @@ import {
 import BGICForm from './form';
 import BGICFormIssue from './form-issue';
 
-class BGICTabCreateSingleSingle extends PureComponent {
+class BGICTabSingleIssue extends PureComponent {
     _isMounted = false;
 
     constructor(props) {
@@ -126,7 +126,7 @@ class BGICTabCreateSingleSingle extends PureComponent {
     }
 }
 
-BGICTabCreateSingleSingle.propTypes = {
+BGICTabSingleIssue.propTypes = {
     accessToken: PropTypes.string.isRequired,
     ownerSelected: PropTypes.oneOfType([
         PropTypes.bool,
@@ -150,4 +150,4 @@ BGICTabCreateSingleSingle.propTypes = {
     ]).isRequired,
 };
 
-export default BGICTabCreateSingleSingle;
+export default BGICTabSingleIssue;

@@ -34,7 +34,7 @@ import BGICForm from './form';
 import BGICFormIssue from './form-issue';
 import BGICIssueList from './issue-list';
 
-class BGICTabImportMultipleIssue extends PureComponent {
+class BGICTabMultipleIssue extends PureComponent {
     _isMounted = false;
 
     constructor(props) {
@@ -544,7 +544,7 @@ class BGICTabImportMultipleIssue extends PureComponent {
     }
 }
 
-BGICTabImportMultipleIssue.propTypes = {
+BGICTabMultipleIssue.propTypes = {
     accessToken: PropTypes.string.isRequired,
     ownerSelected: PropTypes.oneOfType([
         PropTypes.bool,
@@ -568,4 +568,4 @@ BGICTabImportMultipleIssue.propTypes = {
     ]).isRequired,
 };
 
-export default BGICTabImportMultipleIssue;
+export default BGICTabMultipleIssue;

@@ -10,8 +10,8 @@ import {
 } from './helpers/storage';
 
 import BGICNavbar from './components/navbar';
-import BGICPageUserDashboard from './components/page-user-dashboard';
-import BGICPageUserLogin from './components/page-user-login';
+import BGICPageWelcome from './components/page-welcome';
+import BGICPageUserDashboard from './components/page-dashboard';
 
 class App extends PureComponent {
   constructor(props) {
@@ -51,11 +51,12 @@ class App extends PureComponent {
   renderNavbar() {
     return (<BGICNavbar
       currentUser={this.state.currentUser}
+      onUserLogin={this.onUserLogin}
       onUserLogout={this.onUserLogout}
     />);
   }
 
-  renderPageLogin() {
+  renderPageWelcome() {
     const {
       accessToken,
       currentUser,
@@ -65,10 +66,10 @@ class App extends PureComponent {
       return null;
     }
 
-    return <BGICPageUserLogin onUserLogin={this.onUserLogin} />;
+    return <BGICPageWelcome />;
   }
 
-  renderPageIssue() {
+  renderPageDashboard() {
     const {
       accessToken,
       currentUser,
@@ -90,8 +91,8 @@ class App extends PureComponent {
     return (
       <React.Fragment>
         {this.renderNavbar()}
-        {this.renderPageLogin()}
-        {this.renderPageIssue()}
+        {this.renderPageWelcome()}
+        {this.renderPageDashboard()}
       </React.Fragment>
     );
   }
