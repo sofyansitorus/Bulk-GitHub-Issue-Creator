@@ -1,6 +1,7 @@
 {
   "name": "github-issue-looper",
   "version": "0.1.0",
+  "homepage": "https://sofyansitorus.github.io/Bulk-GitHub-Issue-Creator",
   "private": true,
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^1.2.19",
@@ -10,6 +11,7 @@
     "@fortawesome/react-fontawesome": "^0.1.4",
     "axios": "^0.18.1",
     "bootstrap": "^4.3.1",
+    "gh-pages": "^2.1.1",
     "lodash": "^4.17.14",
     "node-sass": "^4.12.0",
     "parse-link-header": "^1.0.1",
@@ -31,7 +33,9 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "predeploy": "yarn run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": "react-app"
