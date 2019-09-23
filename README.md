@@ -1,4 +1,4 @@
-Demo: [https://sofyansitorus.github.io/Bulk-GitHub-Issue-Creator/](hhttps://sofyansitorus.github.io/Bulk-GitHub-Issue-Creator/).
+Demo: [https://sofyansitorus.github.io/Bulk-GitHub-Issue-Creator/](https://sofyansitorus.github.io/Bulk-GitHub-Issue-Creator/).
 
 Demo mirror: [https://bulk-github-issue-creator.netlify.com](https://bulk-github-issue-creator.netlify.com).
 
