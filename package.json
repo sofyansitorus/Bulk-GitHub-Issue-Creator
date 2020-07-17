@@ -12,7 +12,7 @@
     "axios": "^0.18.1",
     "bootstrap": "^4.3.1",
     "gh-pages": "^2.1.1",
-    "lodash": "^4.17.14",
+    "lodash": "^4.17.19",
     "node-sass": "^4.12.0",
     "parse-link-header": "^1.0.1",
     "patch-package": "^6.0.4",
