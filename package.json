@@ -14,7 +14,7 @@
     "gh-pages": "^2.1.1",
     "lodash": "^4.17.14",
     "node-sass": "^4.13.1",
-    "parse-link-header": "^1.0.1",
+    "parse-link-header": "^2.0.0",
     "patch-package": "^6.0.4",
     "postinstall-postinstall": "^2.0.0",
     "prop-types": "^15.7.2",
