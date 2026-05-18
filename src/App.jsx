@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 
-import 'bootstrap/scss/bootstrap.scss';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 import {
   getAuthentication,

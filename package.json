@@ -11,9 +11,9 @@
     "@fortawesome/react-fontawesome": "^0.1.4",
     "axios": "^0.18.1",
     "bootstrap": "^4.3.1",
+    "cross-env": "^7.0.3",
     "gh-pages": "^2.1.1",
     "lodash": "^4.17.14",
-    "node-sass": "^4.13.1",
     "parse-link-header": "^1.0.1",
     "patch-package": "^6.0.4",
     "postinstall-postinstall": "^2.0.0",
@@ -29,13 +29,16 @@
     "storejs": "^1.0.25"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
+    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+    "test": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts test",
     "eject": "react-scripts eject",
     "postinstall": "patch-package",
     "predeploy": "yarn run build",
     "deploy": "gh-pages -d build"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "eslintConfig": {
     "extends": "react-app"
